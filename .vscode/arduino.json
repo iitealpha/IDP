@@ -1,0 +1,6 @@
+{
+    "configuration": "mode=on",
+    "board": "arduino:megaavr:uno2018",
+    "sketch": "3_way_line_following_robot.ino",
+    "port": "/dev/tty.wlan-debug"
+}
