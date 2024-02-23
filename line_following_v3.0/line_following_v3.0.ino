@@ -88,6 +88,18 @@ void turn_right(int16_t speed, int8_t diff_percent){
   }
 }
 
+//void rotate(int16_t speed){
+//  myMotor1->setSpeed(abs(speed)); 
+//  myMotor2->setSpeed(abs(speed)); 
+//  if (speed > 0){
+//    myMotor1->run(FORWARD);
+//    myMotor2->run(BACKWARD);
+//  } else{
+//    myMotor1->run(BACKWARD);
+//    myMotor2->run(FORWARD);
+//  }
+//}
+
 
 void stop(){
   myMotor1->run(RELEASE);
@@ -215,6 +227,13 @@ void loop() {
           mode = 1; // go forward again.
         }
     }
+
+  } else if(mode == 3){
+    // rotate robot in fixed point
+    myMotor2->run(FORWARD)
+    myMotor1->run(BACKWARD)
+    myMotor1->setSpeed(main_speed);
+    myMotor2->setSpeed(main_speed);
   } else{
     stop();
   }
