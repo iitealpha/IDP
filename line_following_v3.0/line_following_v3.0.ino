@@ -112,7 +112,7 @@ void button_press_ISR(){
   // Debounce button
   unsigned long new_time = millis();
   if (millis() > (first_press_time + 300)){
-    mode = (mode + 1) % 3;
+    mode = (mode + 1) % 4;
     first_press_time = new_time;
     junction_state = 0;
     junction_state_new = 0;
@@ -230,8 +230,8 @@ void loop() {
 
   } else if(mode == 3){
     // rotate robot in fixed point
-    myMotor2->run(FORWARD)
-    myMotor1->run(BACKWARD)
+    myMotor2->run(FORWARD);
+    myMotor1->run(BACKWARD);
     myMotor1->setSpeed(main_speed);
     myMotor2->setSpeed(main_speed);
   } else{
@@ -244,6 +244,9 @@ void loop() {
     digitalWrite(LED2, 0);
   } else if(mode == 2){
     digitalWrite(LED1, 0);
+    digitalWrite(LED2, 1);
+  } else if (mode==3){
+    digitalWrite(LED1, 1);
     digitalWrite(LED2, 1);
   } else{
     digitalWrite(LED1, 0);
