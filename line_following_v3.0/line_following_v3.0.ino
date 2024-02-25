@@ -17,15 +17,16 @@ Adafruit_DCMotor *myMotor1 = AFMS.getMotor(1); // Left Motor
 Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2); // Right Motor
 
 // Define sensor pins
-const int sensorFarLeft = 2;  // Now at the back
-const int sensorLeft = 3;
-const int sensorRight = 4;
-const int sensorFarRight = 5;   // Now at the back
-const int button = 6;
-const int LED1 = 7;
-const int LED2 = 8;
+// changed all int to uint8_t
+const uint8_t sensorFarLeft = 2;  // Now at the back
+const uint8_t sensorLeft = 3;
+const uint8_t sensorRight = 4;
+const uint8_t sensorFarRight = 5;   // Now at the back
+const uint8_t button = 6;
+const uint8_t LED1 = 7;
+const uint8_t LED2 = 8;
 
-const int main_speed = 150;
+const uint8_t main_speed = 150;
 
 uint8_t mode = 0;   // Mode state: 1=off, 2=forward, 3=backward
 unsigned long first_press_time = millis();
