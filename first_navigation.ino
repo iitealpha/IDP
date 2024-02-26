@@ -23,6 +23,7 @@ const uint8_t LED1 = 7;
 const uint8_t LED2 = 8;
 
 const uint8_t main_speed = 150;
+const int delay_time = 50; // Time that will be delayed every single time
 
 uint8_t mode = 0;   // Mode state: 1=off, 2=forward, 3=backward
 unsigned long first_press_time = millis();
@@ -236,7 +237,9 @@ void setup() {
 }
 
 void straight_junction(){ // This function must go on as long as you are in the junction
-
+  while ((farRight == 1) || (farLeft == 1)) {
+    
+  }
 }
 
 void left_junction(){ // This function must go on as long as you are in the junction
@@ -248,7 +251,13 @@ void right_junction(){ // This function must go on as long as you are in the jun
 }
 
 void straight(){
-
+  if (right && !left) { //Move left
+    move(main_speed, 1);
+  } else if (!right && left) { //Move to the right
+    move(main_speed, -1);
+  } else { // Includes both going 
+    move(main_speed, 0);
+  } 
 }
 
 void backwards(){
@@ -256,7 +265,12 @@ void backwards(){
 }
 
 bool junction_detected(){
-
+  if (farRight || farLeft || random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20) { 
+  //We are also checking for the current mode being some graph to smooth turning 
+    return true;
+  } else {
+    return false; 
+  }
 }
 
 void loop() {

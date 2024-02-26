@@ -1,0 +1,12 @@
+{
+	"folders": [
+		{
+			"path": "IDP"
+		},
+		{
+			"name": "IDP",
+			"path": "../Documents/PlatformIO/Projects/IDP"
+		}
+	],
+	"settings": {}
+}
