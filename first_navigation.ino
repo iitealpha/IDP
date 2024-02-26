@@ -238,26 +238,39 @@ void setup() {
 
 void straight_junction(){ // This function must go on as long as you are in the junction
   while ((farRight == 1) || (farLeft == 1)) {
-     
+    straight(); 
   } 
-  }
+  delay(delay_time);
+}
 
 void left_junction(){ // This function must go on as long as you are in the junction
-  
+  while (left == 0) {
+    move(main_speed, 0.2);
+    delay(delay_time);
+  }
+  while (left == 1) {
+    move(main_speed, 0.2)
+    delay(delay_time);
+  }
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
 
 }
 
-void straight(){
+void straight(){ // Regular function for going straightforward
   if (right && !left) { //Move left
-    move(main_speed, 1);
+    move(main_speed, 0.2);
   } else if (!right && left) { //Move to the right
-    move(main_speed, -1);
-  } else { // Includes both going 
+    move(main_speed, -0.2);
+  } else if (!right && !left) { // Includes both going 
     move(main_speed, 0);
+  } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
+    for (int i = 0; i < 5; ++i) {
+      move(main_speed, 0);
+      delay(delay_time);
     }
+  }
 }
 
 void backwards(){
