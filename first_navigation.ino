@@ -141,6 +141,10 @@ int mode_of_movement(int current_graph_g, int next_graph_g, int current_compass_
   return x;
 }
 
+int simple_mode_of_motion(){
+  int x = 
+}
+
 void move(int16_t speed, int16_t rotation_fraction) {
   // This function describes every possible motion configuration in the most convinient (I think) way.
   // Speed that you give is the maximal speed of two wheels. 
@@ -255,7 +259,14 @@ void left_junction(){ // This function must go on as long as you are in the junc
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
-
+  while (right == 0) { // Same as left
+    move(main_speed, -0.2);
+    delay(delay_time);
+  }
+  while (right == 1) {
+    move(main_speed, -0.2)
+    delay(delay_time);
+  }
 }
 
 void straight(){ // Regular function for going straightforward
