@@ -146,8 +146,7 @@ void move(int16_t speed, int16_t rotation_fraction) {
   // Speed that you give is the maximal speed of two wheels. 
   // Rotation fraction shows to which extent you rotate. 
   // rotation fraction = 0 => you go forward or backwards. 
-  // Rotation fraction 1 means you move clockwise, -1 means you move anticklokwise
-  // This rotation is believed not to be affected by the sign of speed (- or + gives consistant result)
+  // Rotation fraction -1 means you move clockwise, 1 means you move anticklokwise.
 
   int16_t other_speed = 0;
   int16_t v_left = 0;
@@ -239,12 +238,12 @@ void setup() {
 
 void straight_junction(){ // This function must go on as long as you are in the junction
   while ((farRight == 1) || (farLeft == 1)) {
-    
+     
+  } 
   }
-}
 
 void left_junction(){ // This function must go on as long as you are in the junction
-
+  
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
@@ -258,11 +257,11 @@ void straight(){
     move(main_speed, -1);
   } else { // Includes both going 
     move(main_speed, 0);
-  } 
+    }
 }
 
 void backwards(){
-  if (right && !left) { //Move left
+if (right && !left) { //Move left
     move(-main_speed, -1); // Counter clockwise
   } else if (!right && left) { //Move to the right
     move(-main_speed, 1); // Clockwise
