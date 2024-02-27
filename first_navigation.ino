@@ -25,7 +25,7 @@ const uint8_t LED2 = 8;
 const uint8_t main_speed = 150;
 const int delay_time = 50; // Time that will be delayed every single time
 
-uint8_t mode = 0;   // Mode state: 1=off, 2=forward, 3=backward
+uint8_t mode = 0;   // Mode state: 0=off, 1=forward, 2=backward
 unsigned long first_press_time = millis();
 
 uint8_t junction_state = 0;   // Juncion state: 0=none, 1=left, 2=right
@@ -204,7 +204,11 @@ void button_press_ISR(){
   // Debounce button
   unsigned long new_time = millis();
   if (millis() > (first_press_time + 300)){
-    mode = (mode + 1) % 4;
+    if (mode == 0) {
+      mode = 1; 
+    } else {
+      mode = 0;
+    }
     first_press_time = new_time;
     junction_state = 0;
     junction_state_new = 0;
@@ -328,7 +332,7 @@ void loop() {
   sensity_t = analogRead(sensityPin); 
   dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
 
-  if (mode == 2) {
+  if (mode != 0) {
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       simple_mode_of_motion(); // This function does corresponding turn and ends when the turn is done
       current_compass = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number + 1]-1];
