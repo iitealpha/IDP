@@ -251,35 +251,37 @@ void setup() {
 }
 
 void straight_junction(){ // This function must go on as long as you are in the junction
-  while ((farRight == 1) || (farLeft == 1)) {
+  while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
     straight(); 
   } 
   delay(delay_time);
 }
 
 void left_junction(){ // This function must go on as long as you are in the junction
-  while (left == 0) {
+  while (digitalRead(sensorLeft) == 0) {
     move(main_speed, 0.2);
     delay(delay_time);
   }
-  while (left == 1) {
-    move(main_speed, 0.2)
+  while (digitalRead(sensorLeft) == 1) {
+    move(main_speed, 0.2);
     delay(delay_time);
   }
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
-  while (right == 0) { // Same as left
+  while (digitalRead(sensorRight) == 0) { // Same as left
     move(main_speed, -0.2);
     delay(delay_time);
   }
-  while (right == 1) {
-    move(main_speed, -0.2)
+  while (digitalRead(sensorRight) == 1) {
+    move(main_speed, -0.2);
     delay(delay_time);
   }
 }
 
 void straight(){ // Regular function for going straightforward
+  bool right = digitalRead(sensorRight);
+  bool left = digitalRead(sensorLeft);
   if (right && !left) { //Move left
     move(main_speed, 0.2);
   } else if (!right && left) { //Move to the right
@@ -295,7 +297,9 @@ void straight(){ // Regular function for going straightforward
 }
 
 void backwards(){
-if (right && !left) { //Move left
+  bool right = digitalRead(sensorRight);
+  bool left = digitalRead(sensorLeft);  
+  if (right && !left) { //Move left
     move(-main_speed, -1); // Counter clockwise
   } else if (!right && left) { //Move to the right
     move(-main_speed, 1); // Clockwise
@@ -305,7 +309,7 @@ if (right && !left) { //Move left
 }
 
 bool junction_detected(){
-  if (farRight || farLeft || random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20) { 
   //We are also checking for the current mode being some graph to smooth turning 
     return true;
   } else {
@@ -324,7 +328,7 @@ void loop() {
   sensity_t = analogRead(sensityPin); 
   dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
 
-  if junction_detected(){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
+  if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
     simple_mode_of_motion(); // This function does corresponding turn and ends when the turn is done
     current_compass = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number + 1]-1];
     current_graph_number = current_graph_number + 1; 
