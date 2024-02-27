@@ -328,12 +328,14 @@ void loop() {
   sensity_t = analogRead(sensityPin); 
   dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
 
-  if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
-    simple_mode_of_motion(); // This function does corresponding turn and ends when the turn is done
-    current_compass = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number + 1]-1];
-    current_graph_number = current_graph_number + 1; 
-  } else {
-    straight(); 
+  if mode == 2 {
+    if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
+      simple_mode_of_motion(); // This function does corresponding turn and ends when the turn is done
+      current_compass = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number + 1]-1];
+      current_graph_number = current_graph_number + 1; 
+    } else {
+      straight(); 
+    }
+    delay(delay_time);
   }
-  delay(delay_time);
 }
