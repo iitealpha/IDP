@@ -259,22 +259,22 @@ void straight_junction(){ // This function must go on as long as you are in the 
 
 void left_junction(){ // This function must go on as long as you are in the junction
   while (digitalRead(sensorLeft) == 0) {
-    move(main_speed, 0.2);
+    move(main_speed, 1);
     delay(delay_time);
   }
   while (digitalRead(sensorLeft) == 1) {
-    move(main_speed, 0.2);
+    move(main_speed, 1);
     delay(delay_time);
   }
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
   while (digitalRead(sensorRight) == 0) { // Same as left
-    move(main_speed, -0.2);
+    move(main_speed, -1);
     delay(delay_time);
   }
   while (digitalRead(sensorRight) == 1) {
-    move(main_speed, -0.2);
+    move(main_speed, -1);
     delay(delay_time);
   }
 }
@@ -283,9 +283,9 @@ void straight(){ // Regular function for going straightforward
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);
   if (right && !left) { //Move left
-    move(main_speed, 0.2);
+    move(main_speed, 0.5);
   } else if (!right && left) { //Move to the right
-    move(main_speed, -0.2);
+    move(main_speed, -0.5);
   } else if (!right && !left) { // Includes both going 
     move(main_speed, 0);
   } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
