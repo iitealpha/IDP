@@ -42,7 +42,7 @@ const int map_of_connections[20][3] = {{8,0,0},{10,0,0},{11,0,0},{9,0,0},{14,0,0
 const int first_direction[20] = {1,1,1,3,1,2,1,1,4,2,3,1,4,2,3,2,2,3,2,3}; //Direction (in compass) of the first listed connection. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const int better_map_of_directions[20][20] = {
+const int better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
 {0,5,0,0,0,  0,0,0,0,1,     0,0,0,0,0,  0,0,0,0,0},
 {0,0,5,0,0,  0,0,0,0,0,     1,0,0,0,0,  0,0,0,0,0},
@@ -129,7 +129,8 @@ int mode_t_junction(int start, int finish) {
   return x;
 }
 
-int mode_of_movement(int current_graph_g, int next_graph_g, int current_compass_g) {
+int mode_of_movement(int current_graph_g, int next_graph_g, int current_compass_g) { 
+// Gives results for one of 13 modes of motion for any number of graphs 
   int x = 300;
   if (number_of_connections[current_graph_g-1] == 1){
     x = 13; // Because it goes to the final destination
@@ -141,8 +142,17 @@ int mode_of_movement(int current_graph_g, int next_graph_g, int current_compass_
   return x;
 }
 
-int simple_mode_of_motion(){
-  int x = 
+void simple_mode_of_motion(){
+  int y = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number+1]-1];
+  if ((4+ y - current_compass)%4 == 3) { // Turn left
+    left_junction();
+  } else if ((4 + y - current_compass)%4 == 1) {// Turn right
+    right_junction();
+  } else if ((4+ y - current_compass)%4 == 4) { // Go straight
+    straight_junction();
+  } else { // Go backwards
+    backwards();
+  }
 }
 
 void move(int16_t speed, int16_t rotation_fraction) {
@@ -315,6 +325,11 @@ void loop() {
   dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
 
   if junction_detected(){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
-
+    simple_mode_of_motion(); // This function does corresponding turn and ends when the turn is done
+    current_compass = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number + 1]-1];
+    current_graph_number = current_graph_number + 1; 
+  } else {
+    straight(); 
   }
+  delay(delay_time);
 }
