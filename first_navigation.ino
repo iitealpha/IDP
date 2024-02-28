@@ -322,9 +322,9 @@ void backwards(){
   bool left = digitalRead(sensorLeft);  
   if (right && !left) { //M fgf ove left
   // rotate fraction it set to a small value to ensure robot corrects iteself instead of purely rotating
-    move(-main_speed, -0.1); // Anti-Clockwise
+    move(-main_speed, -0.1); // Clockwise
   } else if (!right && left) { //Move to the right
-    move(-main_speed, 0.1); // Clockwise
+    move(-main_speed, 0.1); // Anti-Clockwise
   } else { // Includes both going 
     move(-main_speed, 0);
   } 
