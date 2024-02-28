@@ -113,7 +113,7 @@ int coordinate_from_final_destination(int current_graph_g, int destination_graph
 }
 
 int new_compass(int current_graph_g, int destination_graph_g) {
-  return better_map_of_directions[current_graph_g][destination_graph_g];
+  return better_map_of_directions[current_graph_g-1][destination_graph_g-1];
 }
 
 int mode_t_junction(int start, int finish) {
@@ -144,11 +144,16 @@ int mode_of_movement(int current_graph_g, int next_graph_g, int current_compass_
 
 void simple_mode_of_motion(){
   int y = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number+1]-1];
-  if ((4+ y - current_compass)%4 == 3) { // Turn left
+  Serial.println("Goal compass");
+  Serial.println(y);
+  Serial.println("Current compass");
+  Serial.println(current_compass);
+  if ((4 + y - current_compass) % 4 == 3) { // Turn left
     left_junction();
-  } else if ((4 + y - current_compass)%4 == 1) {// Turn right
+    Serial.println("Left junction is done!!!");
+  } else if ((4 + y - current_compass) % 4 == 1) {// Turn right
     right_junction();
-  } else if ((4+ y - current_compass)%4 == 4) { // Go straight
+  } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
     straight_junction();
   } else { // Go backwards
     backwards();
@@ -262,10 +267,12 @@ void straight_junction(){ // This function must go on as long as you are in the 
 }
 
 void left_junction(){ // This function must go on as long as you are in the junction
-  while (digitalRead(sensorLeft) == 0) {
+  Serial.print("You have entered left junction");
+  while (digitalRead(sensorLeft) == 0) { // While right sensor is outside of its first line, move it to the line
     move(main_speed, 1);
     delay(delay_time);
   }
+  Serial.print("You have entered the line after the left junction");
   while (digitalRead(sensorLeft) == 1) {
     move(main_speed, 1);
     delay(delay_time);
@@ -273,10 +280,12 @@ void left_junction(){ // This function must go on as long as you are in the junc
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
+  Serial.print("You have entered the right junction");
   while (digitalRead(sensorRight) == 0) { // Same as left
     move(main_speed, -1);
     delay(delay_time);
   }
+  Serial.print("You have entered the line after the right junction");
   while (digitalRead(sensorRight) == 1) {
     move(main_speed, -1);
     delay(delay_time);
@@ -287,9 +296,9 @@ void straight(){ // Regular function for going straightforward
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);
   if (right && !left) { //Move left
-    move(main_speed, 0.5);
+    move(main_speed, 1);
   } else if (!right && left) { //Move to the right
-    move(main_speed, -0.5);
+    move(main_speed, -1);
   } else if (!right && !left) { // Includes both going 
     move(main_speed, 0);
   } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
@@ -334,9 +343,10 @@ void loop() {
 
   if (mode != 0) {
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
-      simple_mode_of_motion(); // This function does corresponding turn and ends when the turn is done
+      simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
       current_compass = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number + 1]-1];
-      current_graph_number = current_graph_number + 1; 
+      Serial.print("Compass was switched to " + current_compass);
+      current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     } else {
       straight(); 
     }
