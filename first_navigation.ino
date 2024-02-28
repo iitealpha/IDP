@@ -249,7 +249,14 @@ void simple_mode_of_motion(){
   Serial.println(y);
   Serial.println("Current compass");
   Serial.println(current_compass);
-  if ((4 + y - current_compass) % 4 == 3) { // Turn left
+  if (y == 5) {
+    // Include code for grabbing here
+    for (int i= 0; i < 10; ++i){ // You need to stop and grab smth at the next junction
+      delay(delay_time);
+    }
+  } else if (current_compass == 5){ // Car was stopped and now it is new junction. 
+    backwards();
+  } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
     left_junction();
     Serial.println("Left junction is done!!!");
   } else if ((4 + y - current_compass) % 4 == 1) {// Turn right
