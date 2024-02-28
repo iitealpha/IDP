@@ -317,7 +317,7 @@ void straight(){ // Regular function for going straightforward
   }
 }
 
-void backwards(){ // Going backwards
+void backwards(){
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);  
   if (right && !left) { //M fgf ove left
