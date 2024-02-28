@@ -14,10 +14,10 @@ Adafruit_DCMotor *myMotor2 = AFMS.getMotor(2); // Right Motor
 
 // Define sensor pins
 // changed all int to uint8_t
-const uint8_t sensorFarLeft = 2;  // Now at the back
+const uint8_t sensorFarLeft = 2;  // Now at the back (near the wheels)
 const uint8_t sensorLeft = 3;
 const uint8_t sensorRight = 4;
-const uint8_t sensorFarRight = 5;   // Now at the back
+const uint8_t sensorFarRight = 5;   // Now at the back (near the wheels)
 const uint8_t button = 6;
 const uint8_t LED1 = 7;
 const uint8_t LED2 = 8;
@@ -27,9 +27,6 @@ const int delay_time = 50; // Time that will be delayed every single time
 
 uint8_t mode = 0;   // Mode state: 0=off, 1=forward, 2=backward
 unsigned long first_press_time = millis();
-
-uint8_t junction_state = 0;   // Juncion state: 0=none, 1=left, 2=right
-uint8_t junction_state_new = 0;
 
 float dist_t, sensity_t; 
 
@@ -66,7 +63,7 @@ const int better_map_of_directions[20][20] = { // First coordinate is current gr
 {0,0,0,0,0,  0,0,0,0,0,     0,3,0,0,0,  2,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,3,  0,4,0,0,0}};
 
-const int map_of_sizes[20][20] = {
+const int map_of_sizes[20][20] = { // First coordinate is current graph, second is goal graph, and result is distance between dots
 {0,0,0,0,0,  0,0,350,0,0,     0,0,0,0,0,  0,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,350,     0,0,0,0,0,  0,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     350,0,0,0,0,  0,0,0,0,0},
@@ -97,14 +94,14 @@ int current_scenario = 1; // Starts from straight line
 bool this_is_the_end = false; // Becomes true when we reach final destination and need to reverse or go backwards
 int random_path[] = {2,10,11,15,20,17,7,7,17,16,18,13,12,8,1}; // This one is just random, can have any length, just connect the graphs
 
-int coordinate_from_compas(int current_graph_g,int current_compass_g){
+int coordinate_from_compas(int current_graph_g,int current_compass_g){ // Function takes current compass as input and tells the corresponding location on T-junction where the movement was started from
   int direction_that_we_will_be_looking_for = 1 + (current_compass_g +1 )%4; // Shift current_compass by 2
   //Serial.println(direction_that_we_will_be_looking_for);
   //Serial.println(first_direction[current_graph_g-1]);
   return(direction_that_we_will_be_looking_for - first_direction[current_graph_g-1] + 4)%4;
 }
 
-int coordinate_from_final_destination(int current_graph_g, int destination_graph_g) {
+int coordinate_from_final_destination(int current_graph_g, int destination_graph_g) { // Returns coordinates in context of T-turn
   int x = 100;
   for (int i = 0; i < 3; ++i) {
     if (map_of_connections[current_graph_g-1][i] == destination_graph_g){x = i;}
@@ -113,7 +110,7 @@ int coordinate_from_final_destination(int current_graph_g, int destination_graph
 }
 
 int new_compass(int current_graph_g, int destination_graph_g) {
-  return better_map_of_directions[current_graph_g-1][destination_graph_g-1];
+  return better_map_of_directions[current_graph_g-1][destination_graph_g-1]; //Pretty useles, I usually assign directly. Change assignment to this function in the future
 }
 
 int mode_t_junction(int start, int finish) {
@@ -140,24 +137,6 @@ int mode_of_movement(int current_graph_g, int next_graph_g, int current_compass_
     x = mode_t_junction(coordinate_from_compas(current_graph_g, current_compass_g), coordinate_from_final_destination(current_graph_g, next_graph_g));
   }
   return x;
-}
-
-void simple_mode_of_motion(){
-  int y = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number+1]-1];
-  Serial.println("Goal compass");
-  Serial.println(y);
-  Serial.println("Current compass");
-  Serial.println(current_compass);
-  if ((4 + y - current_compass) % 4 == 3) { // Turn left
-    left_junction();
-    Serial.println("Left junction is done!!!");
-  } else if ((4 + y - current_compass) % 4 == 1) {// Turn right
-    right_junction();
-  } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
-    straight_junction();
-  } else { // Go backwards
-    backwards();
-  }
 }
 
 void move(int16_t speed, int16_t rotation_fraction) {
@@ -215,8 +194,6 @@ void button_press_ISR(){
       mode = 0;
     }
     first_press_time = new_time;
-    junction_state = 0;
-    junction_state_new = 0;
   }
 }
 
@@ -266,29 +243,53 @@ void straight_junction(){ // This function must go on as long as you are in the 
   delay(delay_time);
 }
 
-void left_junction(){ // This function must go on as long as you are in the junction
-  Serial.print("You have entered left junction");
-  while (digitalRead(sensorLeft) == 0) { // While right sensor is outside of its first line, move it to the line
-    move(main_speed, 1);
-    delay(delay_time);
+void simple_mode_of_motion(){
+  int y = better_map_of_directions[random_path[current_graph_number]-1, random_path[current_graph_number+1]-1];
+  Serial.println("Goal compass");
+  Serial.println(y);
+  Serial.println("Current compass");
+  Serial.println(current_compass);
+  if ((4 + y - current_compass) % 4 == 3) { // Turn left
+    left_junction();
+    Serial.println("Left junction is done!!!");
+  } else if ((4 + y - current_compass) % 4 == 1) {// Turn right
+    right_junction();
+  } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
+    straight_junction();
+  } else { // Go backwards
+    backwards();
   }
-  Serial.print("You have entered the line after the left junction");
-  while (digitalRead(sensorLeft) == 1) {
-    move(main_speed, 1);
-    delay(delay_time);
+}
+
+void left_junction(){ // This function must go on as long as you are in the junction
+  if (this_is_the_end == false) {
+    Serial.print("You have entered left junction");
+    while (digitalRead(sensorLeft) == 0) { // While right sensor is outside of its first line, move it to the line
+      move(main_speed, 1);
+      delay(delay_time);
+    }
+    Serial.print("You have entered the line after the left junction");
+    while (digitalRead(sensorLeft) == 1) {
+      move(main_speed, 1);
+      delay(delay_time);
+  } } else {
+    backwards_left_junction();
   }
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
-  Serial.print("You have entered the right junction");
-  while (digitalRead(sensorRight) == 0) { // Same as left
-    move(main_speed, -1);
-    delay(delay_time);
-  }
-  Serial.print("You have entered the line after the right junction");
-  while (digitalRead(sensorRight) == 1) {
-    move(main_speed, -1);
-    delay(delay_time);
+  if (this_is_the_end == false) {
+    Serial.print("You have entered the right junction");
+    while (digitalRead(sensorRight) == 0) { // Same as left
+      move(main_speed, -1);
+      delay(delay_time);
+    }
+    Serial.print("You have entered the line after the right junction");
+    while (digitalRead(sensorRight) == 1) {
+      move(main_speed, -1);
+      delay(delay_time);
+  } } else {
+    backwards_right_junction();
   }
 }
 
@@ -319,6 +320,42 @@ void backwards(){
   } else { // Includes both going 
     move(-main_speed, 0);
   } 
+  this_is_the_end = true;
+}
+
+void backwards_left_junction(){ // Rotate clokwise until certain results
+  Serial.print("You have entered the left junction");
+  while (digitalRead(sensorRight) == 1) { 
+    move(main_speed, -1);
+    delay(delay_time);
+  }
+  while (digitalRead(sensorRight) == 0) {
+    move(main_speed, -1);
+    delay(delay_time);
+  }
+  while (digitalRead(sensorRight) == 1) {
+    move(main_speed, -1);
+    delay(delay_time);
+  }
+  this_is_the_end = false;
+}
+
+void backwards_right_junction(){ // Rotate anticlockwise until certain reusult. 
+  
+  Serial.print("You have entered the right junction");
+  while (digitalRead(sensorLeft) == 1) { 
+    move(main_speed, 1);
+    delay(delay_time);
+  }
+  while (digitalRead(sensorLeft) == 0) {
+    move(main_speed, 1);
+    delay(delay_time);
+  }
+  while (digitalRead(sensorLeft) == 1) {
+    move(main_speed, 1);
+    delay(delay_time);
+  }
+  this_is_the_end = false;
 }
 
 bool junction_detected(){
