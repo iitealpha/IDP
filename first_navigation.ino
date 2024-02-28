@@ -310,13 +310,14 @@ void straight(){ // Regular function for going straightforward
   }
 }
 
-void backwards(){
+void backwards(){ // Going backwards
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);  
-  if (right && !left) { //Move left
-    move(-main_speed, -1); // Counter clockwise
+  if (right && !left) { //M fgf ove left
+  // rotate fraction it set to a small value to ensure robot corrects iteself instead of purely rotating
+    move(-main_speed, -0.1); // Anti-Clockwise
   } else if (!right && left) { //Move to the right
-    move(-main_speed, 1); // Clockwise
+    move(-main_speed, 0.1); // Clockwise
   } else { // Includes both going 
     move(-main_speed, 0);
   } 
