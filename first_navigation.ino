@@ -167,16 +167,19 @@ void move(int16_t speed, int16_t rotation_fraction) {
   myMotor1->setSpeed(abs(v_left)); 
   myMotor2->setSpeed(abs(v_right));
 
-  if (v_left > 0) {
-    myMotor1->run(FORWARD);
-  } else {
-    myMotor1->run(BACKWARD);
-  }
-  if (v_right > 0) {
-    myMotor2->run(FORWARD);
-  } else {
-    myMotor2->run(BACKWARD);
-  }
+  if (mode != 0) {
+    if (v_left > 0) {
+      myMotor1->run(FORWARD);
+    } else {
+      myMotor1->run(BACKWARD);
+    }
+    if (v_right > 0) {
+      myMotor2->run(FORWARD);
+    } else {
+      myMotor2->run(BACKWARD);
+    }} else {
+      stop();
+    }
 }
 
 void stop(){
@@ -270,15 +273,12 @@ void simple_mode_of_motion(){
 
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
+    move(main_speed, 1);
     Serial.print("You have entered left junction");
     while (digitalRead(sensorLeft) == 0) { // While right sensor is outside of its first line, move it to the line
-      move(main_speed, 1);
-      delay(delay_time);
     }
     Serial.print("You have entered the line after the left junction");
     while (digitalRead(sensorLeft) == 1) {
-      move(main_speed, 1);
-      delay(delay_time);
   } } else {
     backwards_left_junction();
   }
@@ -286,15 +286,12 @@ void left_junction(){ // This function must go on as long as you are in the junc
 
 void right_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    Serial.print("You have entered the right junction");
+    Serial.print("You have entered the right junction");      
+    move(main_speed, -1);
     while (digitalRead(sensorRight) == 0) { // Same as left
-      move(main_speed, -1);
-      delay(delay_time);
     }
     Serial.print("You have entered the line after the right junction");
     while (digitalRead(sensorRight) == 1) {
-      move(main_speed, -1);
-      delay(delay_time);
   } } else {
     backwards_right_junction();
   }
@@ -322,9 +319,9 @@ void backwards(){
   bool left = digitalRead(sensorLeft);  
   if (right && !left) { //M fgf ove left
   // rotate fraction it set to a small value to ensure robot corrects iteself instead of purely rotating
-    move(-main_speed, -0.1); // Clockwise
+    move(-main_speed, -0.1); // Anti-Clockwise
   } else if (!right && left) { //Move to the right
-    move(-main_speed, 0.1); // Anti-Clockwise
+    move(-main_speed, 0.1); // Clockwise
   } else { // Includes both going 
     move(-main_speed, 0);
   } 
@@ -396,5 +393,7 @@ void loop() {
       straight(); 
     }
     delay(delay_time);
+  } else {
+    stop();
   }
 }
