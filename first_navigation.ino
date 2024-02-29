@@ -346,15 +346,15 @@ void backwards(){
 void backwards_left_junction(){ // Rotate clokwise until certain results
   Serial.print("You have entered the left junction");
   while (digitalRead(sensorRight) == 1) { 
-    move(main_speed, -1);
+    move(main_speed, 1);
     delay(delay_time);
   }
   while (digitalRead(sensorRight) == 0) {
-    move(main_speed, -1);
+    move(main_speed, 1);
     delay(delay_time);
   }
   while (digitalRead(sensorRight) == 1) {
-    move(main_speed, -1);
+    move(main_speed, 1);
     delay(delay_time);
   }
   this_is_the_end = false;
@@ -364,15 +364,15 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
   
   Serial.print("You have entered the right junction");
   while (digitalRead(sensorLeft) == 1) { 
-    move(main_speed, 1);
+    move(main_speed, -1);
     delay(delay_time);
   }
   while (digitalRead(sensorLeft) == 0) {
-    move(main_speed, 1);
+    move(main_speed, -1);
     delay(delay_time);
   }
   while (digitalRead(sensorLeft) == 1) {
-    move(main_speed, 1);
+    move(main_speed, -1);
     delay(delay_time);
   }
   this_is_the_end = false;
