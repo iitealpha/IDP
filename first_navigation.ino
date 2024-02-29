@@ -22,8 +22,8 @@ const uint8_t button = 6;
 const uint8_t LED1 = 7;
 const uint8_t LED2 = 8;
 
-const uint8_t main_speed = 150;
-const int delay_time = 50; // Time that will be delayed every single time
+const uint8_t main_speed = 200;
+const int delay_time = 25; // Time that will be delayed every single time
 
 uint8_t mode = 0;   // Mode state: 0=off, 1=forward, 2=backward
 unsigned long first_press_time = millis();
@@ -95,7 +95,7 @@ bool this_is_the_end = false; // Becomes true when we reach final destination an
 unsigned long time_of_last_junction_detected;
 
 //int random_path[] = {2,10,11,15,17,16,12,8,10}; // This one is just random, can have any length, just connect the graphs
-int random_path[] = {2,10,9,8,12,19,16,17,7}; 
+int random_path[] = {2,10,11,15,20,17,16,19,12, 8,9,10,2}; 
 int coordinate_from_compas(int current_graph_g,int current_compass_g){ // Function takes current compass as input and tells the corresponding location on T-junction where the movement was started from
   int direction_that_we_will_be_looking_for = 1 + (current_compass_g +1 )%4; // Shift current_compass by 2
   //Serial.println(direction_that_we_will_be_looking_for);
@@ -270,6 +270,8 @@ void simple_mode_of_motion(){
     }
   } else if (current_compass == 5){ // Car was stopped and now it is new junction. 
     backwards();
+  } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
+    Serial.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
     left_junction();
     Serial.println("Left junction is done!!!");
@@ -312,9 +314,9 @@ void straight(){ // Regular function for going straightforward
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);
   if (right && !left) { //Move right
-    move(main_speed, 1);
+    move(main_speed, 0.5);
   } else if (!right && left) { //Move to the left
-    move(main_speed, -1);
+    move(main_speed, -0.5);
   } else if (!right && !left) { // Includes both going 
     move(main_speed, 0);
   } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
@@ -379,14 +381,8 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 }
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20) { 
-  //We are also checking for the current mode being some graph to smooth turning 
-    if (millis() - time_of_last_junction_detected < 1000) {
-      Serial.println("Whu do you want to do junction? You are not over the previous one");
-      return false;
-    } else {
-      return true;
-    }
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) { 
+    return true;
   } else {
     return false; 
   }
