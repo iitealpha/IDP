@@ -333,10 +333,14 @@ void backwards(){
     move(-main_speed, -0.1); // Anti-Clockwise
   } else if (!right && left) { //Move to the right
     move(-main_speed, 0.1); // Clockwise
-  } else { // Includes both going 
-    move(-main_speed, 0);
-  } 
-  this_is_the_end = true;
+  } else if (!right && !left) { // Includes both going 
+    move(main_speed, 0);
+  } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
+    for (int i = 0; i < 5; ++i) {
+      move(main_speed, 0);
+      delay(delay_time);
+    }
+  }
 }
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
