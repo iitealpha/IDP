@@ -311,11 +311,8 @@ void simple_mode_of_motion(){
   Serial.println(current_compass);
   if (y == 5) {
     // Include code for grabbing here
-    for (int i= 0; i < 10; ++i){ // You need to stop and grab smth at the next junction
-      delay(delay_time);
-    }
-  } else if (current_compass == 5){ // Car was stopped and now it is new junction. 
-    backwards();
+    this_is_the_end = true;
+    stop_and_grab();
   } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
     Serial.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
@@ -359,17 +356,20 @@ void right_junction(){ // This function must go on as long as you are in the jun
 void straight(){ // Regular function for going straightforward
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);
-  if (right && !left) { //Move right
-    move(main_speed, 0.5);
-  } else if (!right && left) { //Move to the left
-    move(main_speed, -0.5);
-  } else if (!right && !left) { // Includes both going 
-    move(main_speed, 0);
-  } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
-    for (int i = 0; i < 5; ++i) {
+    if (this_is_the_end == false) {
+    if (right && !left) { //Move right
+      move(main_speed, 0.5);
+    } else if (!right && left) { //Move to the left
+      move(main_speed, -0.5);
+    } else if (!right && !left) { // Includes both going 
       move(main_speed, 0);
-      delay(delay_time);
-    }
+    } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
+      for (int i = 0; i < 5; ++i) {
+        move(main_speed, 0);
+        delay(delay_time);
+      }
+  } } else {
+    backwards();
   }
 }
 
@@ -426,8 +426,15 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
   this_is_the_end = false;
 }
 
+void stop_and_grab(){
+  // Put here code for grabbing
+  for (int i = 0; o < 50; ++i) {
+    delay(delay_time);
+  }
+}
+
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[[current_graph_number]-1] == 1 && (this_is_the_end || analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10)) ) { 
     return true;
   } else {
     return false; 
@@ -441,9 +448,6 @@ void loop() {
   bool left = digitalRead(sensorLeft);
   bool right = digitalRead(sensorRight);
   bool farRight = digitalRead(sensorFarRight);
-
-  sensity_t = analogRead(sensityPin); 
-  dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
 
   if (mode != 0) {
     moving = true;
