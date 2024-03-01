@@ -100,7 +100,7 @@ unsigned long time_of_last_junction_detected;
 bool moving;  // True if moving, for flashing LED.
 
 //int random_path[] = {2,10,11,15,17,16,12,8,10}; // This one is just random, can have any length, just connect the graphs
-int random_path[] = {2,10,11,15,20,17,16,19,12,8,9,10,2}; 
+int random_path[] = {2,10,9,4,4,9,8,12,13,14,15,11,10,2}; 
 
 void reset(){
   // Reboots the arduino
@@ -312,6 +312,7 @@ void simple_mode_of_motion(){
   if (y == 5) {
     // Include code for grabbing here
     this_is_the_end = true;
+    Serial.print("NOW WE GO BACKWARDS");
     stop_and_grab();
   } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
     Serial.println("Skip this junction");
@@ -325,6 +326,7 @@ void simple_mode_of_motion(){
   } else { // Go backwards
     backwards();
   }
+
 }
 
 void left_junction(){ // This function must go on as long as you are in the junction
@@ -431,10 +433,11 @@ void stop_and_grab(){
   for (int i = 0; i < 50; ++i) {
     delay(delay_time);
   }
+  
 }
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && (this_is_the_end || analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10)) ) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && (this_is_the_end || analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10)) && (current_graph_number != 0) ) { 
     return true;
   } else {
     return false; 
