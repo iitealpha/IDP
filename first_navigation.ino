@@ -4,6 +4,8 @@
 #define MAX_RANG (520)  //the max measurement value of the module is 520cm(a little bit longer than effective max range) 
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 
+
+
 int sensityPin = A0;  // ultrasonic input
 
 Adafruit_MotorShield AFMS = Adafruit_MotorShield(); 
@@ -19,8 +21,9 @@ const uint8_t sensorLeft = 3;
 const uint8_t sensorRight = 4;
 const uint8_t sensorFarRight = 5;   // Now at the back (near the wheels)
 const uint8_t button = 6;
-const uint8_t LED1 = 7;
-const uint8_t LED2 = 8;
+const uint8_t LED_Red = 7;
+const uint8_t LED_Green = 8;
+const uint8_t LED_Blue = 10;
 
 const uint8_t main_speed = 200;
 const int delay_time = 25; // Time that will be delayed every single time
@@ -87,15 +90,48 @@ const int map_of_sizes[20][20] = { // First coordinate is current graph, second 
 {0,0,0,0,0,  0,0,0,0,0,     0,640,0,0,0,  900,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,640,  0,510,0,0,0}};
 
-int current_graph = 10; //In defolt situatino starts from graph 2
+int current_graph = 10; //In default situation starts from graph 2
 int current_graph_number = 1; // we always start from second element of array. 
 int current_compass = 1; // In defolt situation starts from going to the North
 int current_scenario = 1; // Starts from straight line
 bool this_is_the_end = false; // Becomes true when we reach final destination and need to reverse or go backwards
 unsigned long time_of_last_junction_detected;
 
+bool moving;  // True if moving, for flashing LED.
+
 //int random_path[] = {2,10,11,15,17,16,12,8,10}; // This one is just random, can have any length, just connect the graphs
-int random_path[] = {2,10,11,15,20,17,16,19,12, 8,9,10,2}; 
+int random_path[] = {2,10,11,15,20,17,16,19,12,8,9,10,2}; 
+
+void reset(){
+  // Reboots the arduino
+  CPU_CCP = 0xD8;
+  WDT.CTRLA = 0x4;
+  while (true){}
+}
+
+ISR(TCB0_INT_vect){
+  // Timer ISR for flashing blue LED when moving
+  flash_led();
+  // Clear interrupt flag
+  TCB0.INTFLAGS = TCB_CAPT_bm;
+}
+
+void flash_led(){
+  if (moving){
+    if (digitalRead(LED_Blue)){
+      digitalWrite(LED_Blue, 0);
+    }
+    else{
+      digitalWrite(LED_Blue, 1);
+    }
+  }
+  else{
+    digitalWrite(LED_Blue, 0);
+  }
+}
+
+
+
 int coordinate_from_compas(int current_graph_g,int current_compass_g){ // Function takes current compass as input and tells the corresponding location on T-junction where the movement was started from
   int direction_that_we_will_be_looking_for = 1 + (current_compass_g +1 )%4; // Shift current_compass by 2
   //Serial.println(direction_that_we_will_be_looking_for);
@@ -195,7 +231,8 @@ void button_press_ISR(){
     if (mode == 0) {
       mode = 1; 
     } else {
-      mode = 0;
+      //mode = 0;
+      reset();  // To stop the robot, reset arduino.
     }
     first_press_time = new_time;
   }
@@ -211,10 +248,12 @@ void setup() {
   pinMode(sensorRight, INPUT);
   pinMode(sensorFarRight, INPUT);
   pinMode(button, INPUT);
-  pinMode(LED1, OUTPUT);
-  pinMode(LED2, OUTPUT);
-  digitalWrite(LED1, 0);
-  digitalWrite(LED2, 0);
+  pinMode(LED_Red, OUTPUT);
+  pinMode(LED_Green, OUTPUT);
+  pinMode(LED_Blue, OUTPUT);
+  digitalWrite(LED_Red, 0);
+  digitalWrite(LED_Green, 0);
+  digitalWrite(LED_Blue, 0);
 
   // Initialize the Motor Shield
   if (!AFMS.begin()) {
@@ -225,6 +264,13 @@ void setup() {
 
   // Button Interrupt:
   attachInterrupt(digitalPinToInterrupt(button), button_press_ISR, RISING);
+
+  // Timer Interrupt:
+  // Timer A (used as clock for B) clocked at 250kHz.
+  TCB0.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
+  TCB0.CCMP = 62500; // Value to compare with. 62500 gives 2Hz.
+  TCB0.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
+  TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
 
   current_compass = 1;
   current_graph = 2;
@@ -264,7 +310,10 @@ void simple_mode_of_motion(){
   Serial.println("Current compass");
   Serial.println(current_compass);
   if (y == 5) {
-    stop_and_grab();
+    // Include code for grabbing here
+    for (int i= 0; i < 10; ++i){ // You need to stop and grab smth at the next junction
+      delay(delay_time);
+    }
   } else if (current_compass == 5){ // Car was stopped and now it is new junction. 
     backwards();
   } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
@@ -324,14 +373,6 @@ void straight(){ // Regular function for going straightforward
   }
 }
 
-void stop_and_grab(){
-  // Later put there some code for grabbing 
-  // Now just wait
-  for (int i = 0; i < 50; ++i) {
-    delay(delay_time);
-  }
-}
-
 void backwards(){
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);  
@@ -386,7 +427,7 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 }
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number] - 1] == 1 && (analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10))   ) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) { 
     return true;
   } else {
     return false; 
@@ -401,10 +442,11 @@ void loop() {
   bool right = digitalRead(sensorRight);
   bool farRight = digitalRead(sensorFarRight);
 
-  //sensity_t = analogRead(sensityPin); 
-  //dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
+  sensity_t = analogRead(sensityPin); 
+  dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
 
   if (mode != 0) {
+    moving = true;
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       time_of_last_junction_detected = millis();
       simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
@@ -416,8 +458,10 @@ void loop() {
       straight(); 
     }
     delay(delay_time);
-    } else {
+  } else {
     stop();
+    moving = false;
   }
+
 
 }
