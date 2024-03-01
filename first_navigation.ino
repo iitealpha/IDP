@@ -264,10 +264,7 @@ void simple_mode_of_motion(){
   Serial.println("Current compass");
   Serial.println(current_compass);
   if (y == 5) {
-    // Include code for grabbing here
-    for (int i= 0; i < 10; ++i){ // You need to stop and grab smth at the next junction
-      delay(delay_time);
-    }
+    stop_and_grab();
   } else if (current_compass == 5){ // Car was stopped and now it is new junction. 
     backwards();
   } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
@@ -327,6 +324,14 @@ void straight(){ // Regular function for going straightforward
   }
 }
 
+void stop_and_grab(){
+  // Later put there some code for grabbing 
+  // Now just wait
+  for (int i = 0; i < 50; ++i) {
+    delay(delay_time);
+  }
+}
+
 void backwards(){
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);  
@@ -381,7 +386,7 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 }
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number] - 1] == 1 && (analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10))   ) { 
     return true;
   } else {
     return false; 
@@ -396,8 +401,8 @@ void loop() {
   bool right = digitalRead(sensorRight);
   bool farRight = digitalRead(sensorFarRight);
 
-  sensity_t = analogRead(sensityPin); 
-  dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
+  //sensity_t = analogRead(sensityPin); 
+  //dist_t = sensity_t * MAX_RANG / ADC_SOLUTION;
 
   if (mode != 0) {
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
