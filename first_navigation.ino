@@ -91,7 +91,7 @@ const int map_of_sizes[20][20] = { // First coordinate is current graph, second 
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,640,  0,510,0,0,0}};
 
 int current_graph = 10; //In default situation starts from graph 2
-int current_graph_number = 1; // we always start from second element of array. 
+int current_graph_number = 0; // we always start from second element of array. 
 int current_compass = 1; // In defolt situation starts from going to the North
 int current_scenario = 1; // Starts from straight line
 bool this_is_the_end = false; // Becomes true when we reach final destination and need to reverse or go backwards
@@ -428,13 +428,13 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 
 void stop_and_grab(){
   // Put here code for grabbing
-  for (int i = 0; o < 50; ++i) {
+  for (int i = 0; i < 50; ++i) {
     delay(delay_time);
   }
 }
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[[current_graph_number]-1] == 1 && (this_is_the_end || analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10)) ) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && (this_is_the_end || analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10)) ) { 
     return true;
   } else {
     return false; 
