@@ -384,10 +384,10 @@ void backwards(){
   } else if (!right && left) { //Move to the right
     move(-main_speed, 0.1); // Clockwise
   } else if (!right && !left) { // Includes both going 
-    move(main_speed, 0);
+    move(-main_speed, 0);
   } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
     for (int i = 0; i < 5; ++i) {
-      move(main_speed, 0);
+      move(-main_speed, 0);
       delay(delay_time);
     }
   }
