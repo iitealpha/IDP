@@ -316,6 +316,7 @@ void simple_mode_of_motion(){
     }
   } else if (current_compass == 5){ // Car was stopped and now it is new junction. 
     backwards();
+    this_is_the_end = true;
   } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
     Serial.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
