@@ -314,6 +314,8 @@ void simple_mode_of_motion(){
     this_is_the_end = true;
     Serial.print("NOW WE GO BACKWARDS");
     stop_and_grab();
+  } else if (current_compass == 5){
+    reverse();
   } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
     Serial.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
@@ -369,8 +371,8 @@ void straight(){ // Regular function for going straightforward
       for (int i = 0; i < 5; ++i) {
         move(main_speed, 0);
         delay(delay_time);
-      }
-  } } else {
+      }}
+  } else {
     backwards();
   }
 }
@@ -429,15 +431,24 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 }
 
 void stop_and_grab(){
+  stop();
   // Put here code for grabbing
-  for (int i = 0; i < 50; ++i) {
+  for (int i = 0; i < 500; ++i) {
     delay(delay_time);
   }
-  
+}
+
+void reverse(){
+  move(main_speed, 1);
+  while (digitalRead(sensorRight) == 1) {}
+  while (digitalRead(sensorRight) == 0) {}
+  Serial.println("You have entered the line after the reverse junction");
+  while (digitalRead(sensorRight) == 1) {}
 }
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && (this_is_the_end || analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10)) && (current_graph_number != 0) ) { 
+  int goal_compass = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number+1]-1];
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (goal_compass == 5 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 5) || (current_compass == 5) ) { 
     return true;
   } else {
     return false; 
@@ -464,7 +475,7 @@ void loop() {
     } else {
       straight(); 
     }
-    delay(delay_time);
+    delay(delay_time); 
   } else {
     stop();
     moving = false;
