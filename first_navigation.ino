@@ -13,6 +13,7 @@ Servo myservo; // create servo object to control a servo
 int pos = 0; // variable to store the servo position
 int grab = 0; // when grab = 1, contract the mechanism; when grab = 0, release
 int pos_max = 30; //set desired maximum rotation
+Adafruit_TCS34725 tcs = Adafruit_TCS34725();
 // End mechanism initialisation
 
 int sensityPin = A0;  // ultrasonic input
