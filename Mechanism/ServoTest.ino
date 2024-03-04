@@ -1,6 +1,7 @@
 // attach brown to ground, red to 5V, orange to pin 9
 
 #include <Servo.h>
+#include "Colour_Detection_Test.h"
 Servo myservo; // create servo object to control a servo
 int pos = 0; // variable to store the servo position
 int grab = 0; // when grab = 1, contract the mechanism; when grab = 0, release
@@ -23,7 +24,7 @@ void release() {
     delay(40);
   }
 }
-
+/*
 void loop() { // test code, integrate with rest of code
   if (grab == 1) {
     contract();
@@ -38,4 +39,13 @@ void loop() { // test code, integrate with rest of code
       grab = 1;
     } // Wait 4s then grab is set to 1
   }
+} */
+
+
+String mechanism() {
+  contract();
+  String a = block_detect();
+  if (a == "no block") {
+    release(); }
+  return a; 
 }
