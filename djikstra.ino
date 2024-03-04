@@ -1,15 +1,35 @@
-CODE DOES NOT WORK, DONT BOTHER RUNNING
+//CODE DOES NOT WORK, DONT BOTHER RUNNING
 
-//int random_path[] = {0,2,2,5,6,1};
-//int current_graph = 10; //Current graph value
-//int goal_graph = 2; //Goal graph value
+int random_path[] = {0,2,2,5,6,1}; // An old path
+int current_graph = 10; //Current graph value
+int goal_graph = 2; //Goal graph value
 
-//void path_addition(current_graph, y){
+int[] new_path(current_graph, goal_graph){
+	if current_graph==1:{
+		if goal_graph==4:{
+			return {1,8,9,4,4};
+				}
+		else if goal_graph==5:{
+			return {1,8,12,13,14,5,5}
+				}}}
+		else if goal_graph==
+			
+	//Hard coding paths between nodes
+	
+}
+
+void path_addition(current_graph, y){
   //Adds graph points to path
-  //int random_path[] = new int[7];
-  //int distances_from_start[] = new int[20];
-  //distances_from_start[] = map_of_sizes[current_graph-1][];
-  
+  int random_path[] = new int[7];
+  int distances_from_start[] = new int[20];
+  distances_from_start[] = map_of_sizes[current_graph-1][];
+}
+
+
+
+
+
+
 #include<iostream>
 #include<climits>     
 using namespace std;
