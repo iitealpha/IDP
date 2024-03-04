@@ -35,9 +35,6 @@ float dist_t, sensity_t;
 
 // map_names = [1,2,3,4,...20]
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
-// This graph shows numbers of connected graphs in a clockwise +1 way
-// ORDER IS CRUCIAL
-const uint8_t map_of_connections[20][3] = {{8,0,0},{10,0,0},{11,0,0},{9,0,0},{14,0,0},{18,0,0},{17,0,0},{12,9,1},{8,4,10},{11,2,9},{3,10,15},{19,13,8},{12,18,14},{15,5,13},{11,14,20},{17,18,19},{20,7,16},{13,6,16},{16,12,0},{15,17,0}};
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
@@ -96,9 +93,7 @@ bool this_is_the_end = false; // Becomes true when we reach final destination an
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-
-//int random_path[] = {2,10,11,15,17,16,12,8,10}; // This one is just random, can have any length, just connect the graphs
-uint8_t random_path[] = {2,10,9,4,4,9,8,12,13,14,15,11,10,2}; 
+uint8_t random_path[] = {12,13,18,6,18,16,17,20,15,11,10}; 
 
 void reset(){
   // Reboots the arduino
@@ -126,23 +121,6 @@ void flash_led(){
   else{
     digitalWrite(LED_Blue, 0);
   }
-}
-
-int new_compass(int current_graph_g, int destination_graph_g) {
-  return better_map_of_directions[current_graph_g-1][destination_graph_g-1]; //Pretty useles, I usually assign directly. Change assignment to this function in the future
-}
-
-int mode_t_junction(int start, int finish) {
-  int x = 200;
-  //Serial.println(start);
-  //Serial.println(finish);
-  if ((start == 2) && (finish == 0)) {x = 2;}
-  if ((start == 0) && (finish == 2)) {x = 3;}
-  if ((start == 1) && (finish == 2)) {x = 4;}
-  if ((start == 1) && (finish == 0)) {x = 5;}
-  if ((start == 2) && (finish == 1)) {x = 6;}
-  if ((start == 0) && (finish == 1)) {x = 7;}
-  return x;
 }
 
 void move(int16_t speed, float rotation_fraction) {
@@ -264,27 +242,24 @@ void simple_mode_of_motion(){
   //Serial.println(y);
   //Serial.println("Current compass");
   //Serial.println(current_compass);
-  if (y == 5) {
-    // Include code for grabbing here
+  if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
+    Serial.println("Skip this junction");
+  } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
+    Serial.print("Left junction is started... ");
+    left_junction();
+    Serial.println("Left junction is done!!!");
+  } else if ((4 + y - current_compass) % 4 == 1) {// Turn right
+    Serial.print("Right junction is started... ");
+    right_junction();
+    Serial.println("Right junction is done!!!");
+  } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
+    straight_junction();
+  } else { // Go backwards
     this_is_the_end = true;
     Serial.print("NOW WE GO BACKWARDS");
     Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
     stop_and_grab();
     Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-
-  } else if (current_compass == 5){
-    Serial.println("We have grabbed something");
-  } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
-    Serial.println("Skip this junction");
-  } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
-    left_junction();
-    Serial.println("Left junction is done!!!");
-  } else if ((4 + y - current_compass) % 4 == 1) {// Turn right
-    right_junction();
-  } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
-    straight_junction();
-  } else { // Go backwards
-    backwards();
   }
 
 }
@@ -292,26 +267,21 @@ void simple_mode_of_motion(){
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
     move(main_speed, -1);
-    Serial.print("You have entered left junction");
-    while (digitalRead(sensorRight) == 1) {}
-    while (digitalRead(sensorLeft) == 0) { // While right sensor is outside of its first line, move it to the line
-    }
-    Serial.print("You have entered the line after the left junction");
-    while (digitalRead(sensorLeft) == 1) {
-  } } else {
+    while (digitalRead(sensorLeft) == 1) {}
+    while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
+    while (digitalRead(sensorLeft) == 1) {}
+    } else {
     backwards_left_junction();
   }
 }
 
 void right_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    Serial.println("You have entered the right junction");      
     move(main_speed, 1);
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
-    Serial.println("You have entered the line after the right junction");
-    while (digitalRead(sensorRight) == 1) {
-  } } else {
+    while (digitalRead(sensorRight) == 1) {} 
+    } else {
     backwards_right_junction();
   }
 }
@@ -406,10 +376,9 @@ void stop_and_grab(){
 } **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
-  int goal_compass = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number+1]-1];
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (goal_compass == 5 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0) || (current_compass == 5) ) { 
-    if (millis() - time_of_last_junction_detected > 1000){
-      if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (goal_compass == 5 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} else if (current_compass == 5){Serial.println("WAITING IS OVER");}
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0)) { 
+    if (millis() - time_of_last_junction_detected > 250){
+      if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
       return true;
     } else {
       Serial.println("TOO EARLY");
