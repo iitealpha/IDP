@@ -34,7 +34,6 @@ unsigned long first_press_time = millis();
 float dist_t, sensity_t; 
 
 // map_names = [1,2,3,4,...20]
-const int map_with_names[20] = {1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20}; // Graph that has names of the graphs, actually pretty useles.
 const int number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // This graph shows numbers of connected graphs in a clockwise +1 way
 // ORDER IS CRUCIAL
@@ -130,23 +129,6 @@ void flash_led(){
   }
 }
 
-
-
-int coordinate_from_compas(int current_graph_g,int current_compass_g){ // Function takes current compass as input and tells the corresponding location on T-junction where the movement was started from
-  int direction_that_we_will_be_looking_for = 1 + (current_compass_g +1 )%4; // Shift current_compass by 2
-  //Serial.println(direction_that_we_will_be_looking_for);
-  //Serial.println(first_direction[current_graph_g-1]);
-  return(direction_that_we_will_be_looking_for - first_direction[current_graph_g-1] + 4)%4;
-}
-
-int coordinate_from_final_destination(int current_graph_g, int destination_graph_g) { // Returns coordinates in context of T-turn
-  int x = 100;
-  for (int i = 0; i < 3; ++i) {
-    if (map_of_connections[current_graph_g-1][i] == destination_graph_g){x = i;}
-  }
-  return x;
-}
-
 int new_compass(int current_graph_g, int destination_graph_g) {
   return better_map_of_directions[current_graph_g-1][destination_graph_g-1]; //Pretty useles, I usually assign directly. Change assignment to this function in the future
 }
@@ -161,19 +143,6 @@ int mode_t_junction(int start, int finish) {
   if ((start == 1) && (finish == 0)) {x = 5;}
   if ((start == 2) && (finish == 1)) {x = 6;}
   if ((start == 0) && (finish == 1)) {x = 7;}
-  return x;
-}
-
-int mode_of_movement(int current_graph_g, int next_graph_g, int current_compass_g) { 
-// Gives results for one of 13 modes of motion for any number of graphs 
-  int x = 300;
-  if (number_of_connections[current_graph_g-1] == 1){
-    x = 13; // Because it goes to the final destination
-  } else if(number_of_connections[current_graph_g-1] == 2) {
-    x = 1;
-  } else {
-    x = mode_t_junction(coordinate_from_compas(current_graph_g, current_compass_g), coordinate_from_final_destination(current_graph_g, next_graph_g));
-  }
   return x;
 }
 
@@ -275,19 +244,6 @@ void setup() {
   current_compass = 1;
   current_graph = 2;
 
-  /**int answers[sizeof(random_path) / sizeof(random_path[0]) - 1];
-  for (int i = 1; i < (sizeof(random_path) / sizeof(random_path[0])); ++i) {
-    Serial.println(random_path[i]);
-    answers[i-1] = mode_of_movement(random_path[i], random_path[i+1], current_compass);
-    current_compass = 1 + (first_direction[random_path[i]-1] + coordinate_from_final_destination(random_path[i], random_path[i+1])+3) % 4;
-    
-    Serial.println(answers[i-1]);
-  }
-  answers[sizeof(random_path) / sizeof(random_path[0]) - 2] = 13; **/
-
-  /**for (int i = 0; i < 20; ++ i) {
-    Serial.println(better_map_of_directions[])
-  }**/
 }
 
 void straight_junction(){ // This function must go on as long as you are in the junction
@@ -295,27 +251,30 @@ void straight_junction(){ // This function must go on as long as you are in the 
   while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
     straight(); 
   } 
-  Serial.println("Straight junction is done");
+  //Serial.println("Straight junction is done");
   delay(delay_time);
 }
 
 void simple_mode_of_motion(){
   int y = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number+1]-1];
-  Serial.println("Current graph");
-  Serial.println(random_path[current_graph_number]);
-  Serial.println("Next graph");
-  Serial.println(random_path[current_graph_number + 1]);
-  Serial.println("Goal compass");
-  Serial.println(y);
-  Serial.println("Current compass");
-  Serial.println(current_compass);
+  //Serial.println("Current graph");
+  //Serial.println(random_path[current_graph_number]);
+  //Serial.println("Next graph");
+  //Serial.println(random_path[current_graph_number + 1]);
+  //Serial.println("Goal compass");
+  //Serial.println(y);
+  //Serial.println("Current compass");
+  //Serial.println(current_compass);
   if (y == 5) {
     // Include code for grabbing here
     this_is_the_end = true;
     Serial.print("NOW WE GO BACKWARDS");
+    Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
     stop_and_grab();
+    Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+
   } else if (current_compass == 5){
-    reverse();
+    Serial.println("We have grabbed something");
   } else if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
     Serial.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
@@ -335,6 +294,7 @@ void left_junction(){ // This function must go on as long as you are in the junc
   if (this_is_the_end == false) {
     move(main_speed, -1);
     Serial.print("You have entered left junction");
+    while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorLeft) == 0) { // While right sensor is outside of its first line, move it to the line
     }
     Serial.print("You have entered the line after the left junction");
@@ -348,8 +308,8 @@ void right_junction(){ // This function must go on as long as you are in the jun
   if (this_is_the_end == false) {
     Serial.println("You have entered the right junction");      
     move(main_speed, 1);
-    while (digitalRead(sensorRight) == 0) { // Same as left
-    }
+    while (digitalRead(sensorRight) == 1) {}
+    while (digitalRead(sensorRight) == 0) {}
     Serial.println("You have entered the line after the right junction");
     while (digitalRead(sensorRight) == 1) {
   } } else {
@@ -433,7 +393,7 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 void stop_and_grab(){
   stop();
   // Put here code for grabbing
-  for (int i = 0; i < 500; ++i) {
+  for (int i = 0; i < 50; ++i) {
     delay(delay_time);
   }
 }
@@ -448,8 +408,14 @@ void reverse(){
 
 bool junction_detected(){
   int goal_compass = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number+1]-1];
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (goal_compass == 5 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 5) || (current_compass == 5) ) { 
-    return true;
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (goal_compass == 5 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0) || (current_compass == 5) ) { 
+    if (millis() - time_of_last_junction_detected > 1000){
+      if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (goal_compass == 5 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} else if (current_compass == 5){Serial.println("WAITING IS OVER");}
+      return true;
+    } else {
+      Serial.println("TOO EARLY");
+      return false;
+    }
   } else {
     return false; 
   }
@@ -469,8 +435,8 @@ void loop() {
       time_of_last_junction_detected = millis();
       simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
       current_compass = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number + 1]-1];
-      Serial.print("Compass was switched to " );
-      Serial.println(current_compass);
+      //Serial.print("Compass was switched to " );
+      //Serial.println(current_compass);
       current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     } else {
       straight(); 
