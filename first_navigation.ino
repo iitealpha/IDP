@@ -448,7 +448,6 @@ String mechanism() {
 
 void stop_and_grab(){
   stop();
-  // Put here code for grabbing
   mechanism();
   for (int i = 0; i < 50; ++i) {
     delay(delay_time);
