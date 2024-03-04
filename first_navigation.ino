@@ -383,6 +383,7 @@ void backwards(){
   if (right && !left) { //M fgf ove left
   // rotate fraction it set to a small value to ensure robot corrects iteself instead of purely rotating
     move(-main_speed, -0.1); // Anti-Clockwise
+
   } else if (!right && left) { //Move to the right
     move(-main_speed, 0.1); // Clockwise
   } else if (!right && !left) { // Includes both going 
@@ -394,6 +395,42 @@ void backwards(){
     }
   }
 }
+
+
+//a backwards function with linearly changing rotating fraction ans small delays
+/*
+void backwards() {
+  bool right = digitalRead(sensorRight);
+  bool left = digitalRead(sensorLeft);
+  
+  float rotationFraction = 0.3; // Start with a small value for rotation
+  const float decrement = 0.05; // Amount to decrease rotationFraction in each step
+  const int steps = 6; // Number of steps to go from 0.3 to 0, based on decrement
+
+  if (right && !left) { // Move left, anti-clockwise
+    for (int i = 0; i < steps; i++) {
+      move(-main_speed, -rotationFraction);
+      rotationFraction += decrement; // -0.3 -> 0
+      delay(delay_time / steps); //small delay
+    }
+    delay(delay_time/2); //another small delay to make it reverse straight
+  } else if (!right && left) { // Move to the right, clockwise
+    for (int i = 0; i < steps; i++) {
+      move(-main_speed, rotationFraction);
+      rotationFraction -= decrement; // 0.3 -> 0
+      delay(delay_time / steps); //small delay
+    }
+  } else if (!right && !left) { // Go straight backwards
+    move(-main_speed, 0);
+  } else { // Both are white, move straight backwards for a short period
+    for (int i = 0; i < 5; ++i) {
+      move(-main_speed, 0);
+      delay(delay_time); 
+    }
+    delay(delay_time/2); //another small delay to make it reverse straight
+  }
+}
+*/
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
   Serial.print("You have entered the left junction");
