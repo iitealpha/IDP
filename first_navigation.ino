@@ -85,7 +85,6 @@ const int map_of_sizes[20][20] = { // First coordinate is current graph, second 
 {0,0,0,0,0,  0,0,0,0,0,     0,640,0,0,0,  900,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,640,  0,510,0,0,0}};
 
-uint8_t current_graph = 10; //In default situation starts from graph 2
 uint8_t current_graph_number = 0; // we always start from second element of array. 
 uint8_t current_compass = 1; // In defolt situation starts from going to the North
 uint8_t current_scenario = 1; // Starts from straight line
@@ -219,8 +218,6 @@ void setup() {
   TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
 
   current_compass = 1;
-  current_graph = 2;
-
 }
 
 void straight_junction(){ // This function must go on as long as you are in the junction
