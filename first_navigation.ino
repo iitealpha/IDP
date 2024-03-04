@@ -1,10 +1,19 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
+// Mechanism setup
+#include <Servo.h>
+#include <Wire.h>
+#include "Adafruit_TCS34725.h"
 
 #define MAX_RANG (520)  //the max measurement value of the module is 520cm(a little bit longer than effective max range) 
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 
-
+// Mechanism initialisation
+Servo myservo; // create servo object to control a servo
+int pos = 0; // variable to store the servo position
+int grab = 0; // when grab = 1, contract the mechanism; when grab = 0, release
+int pos_max = 30; //set desired maximum rotation
+// End mechanism initialisation
 
 int sensityPin = A0;  // ultrasonic input
 
@@ -211,6 +220,15 @@ void setup() {
   Serial.begin(9600); // Start serial communication
   Serial.println("Starting...");
 
+  // Mechanism setup
+  myservo.attach(9); // use pin 9
+  if (tcs.begin()) {
+    Serial.println("Found sensor");
+  } else {
+    Serial.println("No TCS34725 found ... check your connections");
+    while (1);
+  } // Mechanism done
+
   // Set sensor pins as input
   pinMode(sensorFarLeft, INPUT);
   pinMode(sensorLeft, INPUT);
@@ -390,13 +408,53 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
   this_is_the_end = false;
 }
 
+// Mechanism start
+void contract() {
+  for (pos = 0; pos <= pos_max; pos += 1) { // goes from 0 degrees to max position
+    myservo.write(pos); 
+    delay(40);
+  }
+}
+
+void release() {
+  for (pos = pos_max; pos >= 0; pos -= 1) { // goes from max position to 0 degrees
+    myservo.write(pos);
+    delay(40);
+  }
+}
+
+String block_detect() {
+  uint16_t r, g, b, c, colorTemp, lux;
+
+  tcs.getRawData(&r, &g, &b, &c);
+  colorTemp = tcs.calculateColorTemperature(r, g, b);
+  lux = tcs.calculateLux(r, g, b);
+
+  if (lux > 4000) {
+    return "red"; }  
+  else if (lux < 4000 && colorTemp > 10000) {
+    return "black"; } 
+  else {
+    return "no block"; }
+}
+
+String mechanism() {
+  contract();
+  String a = block_detect();
+  if (a == "no block") {
+    release(); }
+  return a; 
+}
+
 void stop_and_grab(){
   stop();
   // Put here code for grabbing
+  mechanism();
   for (int i = 0; i < 50; ++i) {
     delay(delay_time);
   }
-}
+} 
+// Mechanism done
 
 void reverse(){
   move(main_speed, 1);
