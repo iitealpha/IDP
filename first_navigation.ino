@@ -34,14 +34,13 @@ unsigned long first_press_time = millis();
 float dist_t, sensity_t; 
 
 // map_names = [1,2,3,4,...20]
-const int number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
+const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // This graph shows numbers of connected graphs in a clockwise +1 way
 // ORDER IS CRUCIAL
-const int map_of_connections[20][3] = {{8,0,0},{10,0,0},{11,0,0},{9,0,0},{14,0,0},{18,0,0},{17,0,0},{12,9,1},{8,4,10},{11,2,9},{3,10,15},{19,13,8},{12,18,14},{15,5,13},{11,14,20},{17,18,19},{20,7,16},{13,6,16},{16,12,0},{15,17,0}};
-const int first_direction[20] = {1,1,1,3,1,2,1,1,4,2,3,1,4,2,3,2,2,3,2,3}; //Direction (in compass) of the first listed connection. 
+const uint8_t map_of_connections[20][3] = {{8,0,0},{10,0,0},{11,0,0},{9,0,0},{14,0,0},{18,0,0},{17,0,0},{12,9,1},{8,4,10},{11,2,9},{3,10,15},{19,13,8},{12,18,14},{15,5,13},{11,14,20},{17,18,19},{20,7,16},{13,6,16},{16,12,0},{15,17,0}};
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const int better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
+const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
 {0,5,0,0,0,  0,0,0,0,1,     0,0,0,0,0,  0,0,0,0,0},
 {0,0,5,0,0,  0,0,0,0,0,     1,0,0,0,0,  0,0,0,0,0},
@@ -89,17 +88,17 @@ const int map_of_sizes[20][20] = { // First coordinate is current graph, second 
 {0,0,0,0,0,  0,0,0,0,0,     0,640,0,0,0,  900,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,640,  0,510,0,0,0}};
 
-int current_graph = 10; //In default situation starts from graph 2
-int current_graph_number = 0; // we always start from second element of array. 
-int current_compass = 1; // In defolt situation starts from going to the North
-int current_scenario = 1; // Starts from straight line
+uint8_t current_graph = 10; //In default situation starts from graph 2
+uint8_t current_graph_number = 0; // we always start from second element of array. 
+uint8_t current_compass = 1; // In defolt situation starts from going to the North
+uint8_t current_scenario = 1; // Starts from straight line
 bool this_is_the_end = false; // Becomes true when we reach final destination and need to reverse or go backwards
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
 
 //int random_path[] = {2,10,11,15,17,16,12,8,10}; // This one is just random, can have any length, just connect the graphs
-int random_path[] = {2,10,9,4,4,9,8,12,13,14,15,11,10,2}; 
+uint8_t random_path[] = {2,10,9,4,4,9,8,12,13,14,15,11,10,2}; 
 
 void reset(){
   // Reboots the arduino
@@ -398,13 +397,13 @@ void stop_and_grab(){
   }
 }
 
-void reverse(){
+/**void reverse(){
   move(main_speed, 1);
   while (digitalRead(sensorRight) == 1) {}
   while (digitalRead(sensorRight) == 0) {}
   Serial.println("You have entered the line after the reverse junction");
   while (digitalRead(sensorRight) == 1) {}
-}
+} **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
   int goal_compass = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number+1]-1];
