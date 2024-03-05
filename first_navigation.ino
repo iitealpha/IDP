@@ -8,6 +8,7 @@ Servo mech_servo;
 
 #define MAX_RANG (520)  //the max measurement value of the module is 520cm(a little bit longer than effective max range) 
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
+#define ULTRASONIC_SAMPLE_PERIOD (10) // sample period in ms
 
 
 
@@ -36,6 +37,7 @@ Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS347
 const uint8_t cube_color = 0;
 
 const uint8_t main_speed = 200;
+const uint8_t slow_speed = 130;
 const int delay_time = 25; // Time that will be delayed every single time
 
 uint8_t mode = 0;   // Mode state: 0=off, 1=forward, 2=backward
@@ -128,6 +130,17 @@ uint8_t current_path[] = {2,10,9,4,9,0,0,0};
 uint8_t bay_array[] = {4,5,6,7}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
+const uint8_t distance_history_length = 10;
+float distance_history[distance_history_length];  // Stores the last few readings of the distance sensor, for averaging. (queue structure)
+uint8_t distance_history_pointer = 0; // points to head of the queue.
+uint8_t distance_history_datapoints = 0; // increases until full
+
+// Comparing latest value to the average:
+// robot max speed around 20cm/s, but will be less when going into a bay.
+// max deviation = fudge_factor * ((num_samples/2) * max_distance_per_sample (assuming constant speed))
+const float max_acceptable_deviation = 2 * (0.5 * distance_history_length * 20 * ULTRASONIC_SAMPLE_PERIOD / 1000);
+float current_wall_distance = 0; // Use this for all distance measurements, updated only when value is acceptable.
+
 
 
 void new_path_define(int x);
@@ -146,7 +159,9 @@ void backwards_right_junction();
 void stop_and_grab();
 void stop_and_release();
 void color_detection();
+int spike_in_distance();
 bool junction_detected();
+
 
 
 
@@ -162,6 +177,17 @@ ISR(TCB0_INT_vect){
   flash_led();
   // Clear interrupt flag
   TCB0.INTFLAGS = TCB_CAPT_bm;
+}
+
+ISR(TCB1_INT_vect){
+  // Take distaance reading:
+  distance_history_pointer = (distance_history_pointer + 1) % distance_history_length;
+  distance_history[distance_history_pointer] = analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION;
+  if (distance_history_datapoints < distance_history_length){
+    distance_history_datapoints ++; // increase unless full
+  }
+  // Clear interrupt flag
+  TCB1.INTFLAGS = TCB_CAPT_bm;
 }
 
 void flash_led(){
@@ -310,26 +336,27 @@ void button_press_ISR(){
 
 
 void straight_junction(){ // This function must go on as long as you are in the junction
+  bool sensor_sequence[] = {1,0,1,0,1};
   if (this_is_the_end == false){
     Serial.println("Go straight in junction");
     while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
       straight(); 
     } 
-  } else if(current_path[current_graph_number] == 8) { // Anticklokwise
+  } else if(current_path[current_graph_number] == 8) { // Turn 180 degrees anticlockwise at a T-junction, i.e. stop turning after crossing second white line.
     move(main_speed, -1);
-    while (digitalRead(sensorLeft) == 1) {}
-    while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
-    while (digitalRead(sensorLeft) == 1) {}
-    while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
-    while (digitalRead(sensorLeft) == 1) {}
+    for (int i = 0; i < 5; i++){
+      while (digitalRead(sensorLeft) == sensor_sequence[i]) {
+        delay(10); // delay in case of "bounce" in line sensor readings.
+      }
+    }
     this_is_the_end = false;
-  } else {
+  } else {  // Turn 180 degrees clockwise at a T-junction, i.e. stop turning after crossing second white line.
     move(main_speed, 1);
-    while (digitalRead(sensorRight) == 1) {}
-    while (digitalRead(sensorRight) == 0) {} // While right sensor is outside of its first line, move it to the line
-    while (digitalRead(sensorRight) == 1) {}
-    while (digitalRead(sensorRight) == 0) {} // While right sensor is outside of its first line, move it to the line
-    while (digitalRead(sensorRight) == 1) {}
+    for (int i = 0; i < 5; i++){
+      while (digitalRead(sensorRight) == sensor_sequence[i]) {
+        delay(10); // delay in case of "bounce" in line sensor readings.
+      }
+    }
     this_is_the_end = false;
   }
   //Serial.println("Straight junction is done");
@@ -367,6 +394,7 @@ void simple_mode_of_motion(){
       Serial.println("Picking up a block...");
       color_detection();
       Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+      Serial.print("NOW WE GO BACKWARDS");
     } else {
       stop_and_release();
       // stop and release
@@ -563,9 +591,41 @@ void color_detection() {
   while (digitalRead(sensorRight) == 1) {}
 } **/ // If you ever decide to turn by 180 degrees call this function
 
+
+int spike_in_distance(){
+  // Calculates if the ultrasonic sensor reading has spiked due to it seeing the cube instead of the wall.
+  // Returns +1 is distance has increased significantly, -1 if decreased, and 0 otherwise.
+  // length of distance history and sample period must be set to optimal value:
+  //  If either of these are too short, by the time the code checks, may have been changed for a while.
+  //  If too long, when correcting, may not see two changes occuring within a short time period.
+  float average = 0;
+  float recent_average = 0;
+  for (int i = 0; i < distance_history_datapoints; i++){
+    average += distance_history[i];
+  }
+  average /= distance_history_datapoints; // calculate mean
+  
+  if ((distance_history[distance_history_pointer] - average) > max_acceptable_deviation){
+    // Distance has suddenly increased, need to reset the history so that further changes can be detected
+    distance_history[0] = distance_history[distance_history_pointer]; // use last value as first in the reset history
+    distance_history_pointer = 1;
+    distance_history_datapoints = 1;
+    return 1;
+  } else if ((distance_history[distance_history_pointer] - average) < -max_acceptable_deviation){
+    // Distance has decreased significantly, same process as above.
+    distance_history[0] = distance_history[distance_history_pointer]; // use last value as first in the reset history
+    distance_history_pointer = 1;
+    distance_history_datapoints = 1;
+    return -1;
+  } else{
+    return 0;
+  }
+  
+}
+
 bool junction_detected(){
-  float distance_from_wall = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && distance_from_wall < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
+  bool is_a_bay = (number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2);  // (and not the starting point)
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (is_a_bay && current_wall_distance < signal_distance) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
   //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
 //    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
     //if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[current_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
@@ -608,12 +668,18 @@ void setup() {
   // Button Interrupt:
   attachInterrupt(digitalPinToInterrupt(button), button_press_ISR, RISING);
 
-  // Timer Interrupt:
+  // Timer Interrupt for LED flashing:
   // Timer A (used as clock for B) clocked at 250kHz.
   TCB0.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
   TCB0.CCMP = 62500; // Value to compare with. 62500 gives 2Hz.
   TCB0.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
   TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
+
+  // Timer interrupt for taking distance readings:
+  TCB1.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
+  TCB1.CCMP = 125 * ULTRASONIC_SAMPLE_PERIOD; // Value to compare with. 125 gives 1ms
+  TCB1.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
+  TCB1.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
 
   current_compass = 1;
 }
@@ -626,8 +692,30 @@ void loop() {
   bool farRight = digitalRead(sensorFarRight);
 
   if (mode != 0) {
-    moving = true;
-    move(main_speed, current_rot_frac);
+    moving = true;   
+
+    // if entering a bay:
+    // may need to add parking bay to this (current_path[current_graph_number] == 2)
+    if (current_path[current_graph_number] == 4 || current_path[current_graph_number] == 5 || current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){
+      move(slow_speed, 0);
+      //
+      if (spike_in_distance() == -1){
+        // distance has suddenly got smaller.
+        // ultrasonic sensor on left side, so must be pointing slightly right, therefore correct by turning left (anticlockwise).
+        move(slow_speed, 0.1);
+        delay(ULTRASONIC_SAMPLE_PERIOD);
+        while(spike_in_distance != 1){
+          // keep correcting until distance gets larger again.
+          delay(ULTRASONIC_SAMPLE_PERIOD);
+        }
+      }
+      current_wall_distance = distance_history[distance_history_pointer];
+
+    }
+    else{
+      // all other paths (not entering a bay)
+      move(main_speed, current_rot_frac);
+    }
 
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       time_of_last_junction_detected = millis();
