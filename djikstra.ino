@@ -4,7 +4,6 @@ void setup(){
 
 int random_path[] = {0,0,0,0,0,0,0,0}; // An old path
 int current_graph_number = 7; //Current graph value
-int goal_graph = 3; //Goal graph value
 
 int paths_matrix[17][8]=
 {
@@ -33,60 +32,60 @@ for (int i = 0; i < 8; ++i) {
 }
 }
 
-void new_path(){
+void new_path(int big_goal_graph){
 	//Hard coding paths between nodes
 	if (current_graph_number==1){
-		if (goal_graph==4){
+		if (big_goal_graph==4){
 			new_path_define(1);
-		}else if (goal_graph==5){
+		}else if (big_goal_graph==5){
 			new_path_define(2);
-		}else if (goal_graph==6){
+		}else if (big_goal_graph==6){
 			new_path_define(3);
-		}else if (goal_graph==7){
+		}else if (big_goal_graph==7){
 			new_path_define(4);
 		}else{
 			new_path_define(0);
 		}}
 	if (current_graph_number==3){
-		if (goal_graph==4){
+		if (big_goal_graph==4){
 			new_path_define(5);
-		}else if (goal_graph==5){
+		}else if (big_goal_graph==5){
 			new_path_define(6);
-		}else if (goal_graph==6){
+		}else if (big_goal_graph==6){
 			new_path_define(7);
-		}else if (goal_graph==7){
+		}else if (big_goal_graph==7){
 			new_path_define(8);
 		}else{
 			new_path_define(0);
 		}}
 	if (current_graph_number==4){
-		if (goal_graph==1){
+		if (big_goal_graph==1){
 			new_path_define(9);
-		}else if (goal_graph==3){
+		}else if (big_goal_graph==3){
 			new_path_define(10);
 		}else{
 			new_path_define(0);
 		}}
 	if (current_graph_number==5){
-		if (goal_graph==1){
+		if (big_goal_graph==1){
 			new_path_define(11);
-		}else if (goal_graph==3){
+		}else if (big_goal_graph==3){
 			new_path_define(12);
 		}else{
 			new_path_define(0);
 		}}
 	if (current_graph_number==6){
-		if (goal_graph==1){
+		if (big_goal_graph==1){
 			new_path_define(13);
-		}else if (goal_graph==3){
+		}else if (big_goal_graph==3){
 			new_path_define(14);
 		}else{
 			new_path_define(0);
 		}}
 	if (current_graph_number==7){
-		if (goal_graph==1){
+		if (big_goal_graph==1){
 			new_path_define(15);
-		}else if (goal_graph==3){
+		}else if (big_goal_graph==3){
 			new_path_define(16);
 		}else{
 			new_path_define(0);
@@ -96,7 +95,7 @@ void new_path(){
 	
 }
 void loop(){
-	new_path();
+	new_path(3);
 	Serial.println(random_path[3]);
   
 }
