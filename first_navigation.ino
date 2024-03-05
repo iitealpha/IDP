@@ -309,9 +309,9 @@ void backwards(){
   bool left = digitalRead(sensorLeft);  
   if (right && !left) { //M fgf ove left
   // rotate fraction it set to a small value to ensure robot corrects iteself instead of purely rotating
-    move(-main_speed, -0.1); // Anti-Clockwise
+    move(-main_speed, 0.1); // Anti-Clockwise
   } else if (!right && left) { //Move to the right
-    move(-main_speed, 0.1); // Clockwise
+    move(-main_speed, -0.1); // Clockwise
   } else if (!right && !left) { // Includes both going 
     move(-main_speed, 0);
   } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
@@ -356,6 +356,10 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
     delay(delay_time);
   }
   this_is_the_end = false;
+    time_of_last_junction_detected = millis();
+  while (millis() - time_of_last_junction_detected < 1000) {
+    straight();
+  }
 }
 
 void backwards_right_junction(){ // Rotate anticlockwise until certain reusult. 
@@ -374,6 +378,10 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
     delay(delay_time);
   }
   this_is_the_end = false;
+  time_of_last_junction_detected = millis();
+  while (millis() - time_of_last_junction_detected < 1000) {
+    straight();
+  }
 }
 
 void stop_and_grab(){
@@ -393,8 +401,8 @@ void stop_and_grab(){
 } **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0 && random_path[current_graph_number] != 2)) { 
-    if (millis() - time_of_last_junction_detected > 250){
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < 10.0 && random_path[current_graph_number] != 2)) { 
+    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
       if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
       return true;
     } else {
