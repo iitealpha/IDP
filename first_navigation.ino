@@ -40,6 +40,7 @@ const int delay_time = 25; // Time that will be delayed every single time
 
 uint8_t mode = 0;   // Mode state: 0=off, 1=forward, 2=backward
 unsigned long first_press_time = millis();
+const float signal_distance = 10.0;
 
 float dist_t, sensity_t; 
 
@@ -95,6 +96,26 @@ const int map_of_sizes[20][20] = { // First coordinate is current graph, second 
 {0,0,0,0,0,  0,0,0,0,0,     0,640,0,0,0,  900,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,640,  0,510,0,0,0}};
 
+int paths_matrix[17][8]={
+  {0,0,0,0,0,0,0,0},
+  {1,8,9,4,9,0,0,0},
+  {1,8,12,13,14,5,14,0},
+  {1,8,12,13,18,6,18,0},
+  {1,8,12,19,16,17,7,17},
+  {3,11,10,9,4,9,0,0},
+  {3,11,15,14,5,14,0,0},
+  {3,11,15,14,13,18,6,18},
+  {3,11,15,20,17,7,17,0},
+  {4,9,8,1,8,0,0,0},
+  {4,9,10,11,3,11,0,0},
+  {5,14,13,12,8,1,8,0},
+  {5,14,15,11,3,11,0,0},
+  {6,18,13,12,8,1,8,0},
+  {6,18,13,14,15,11,3,11},
+  {7,17,16,19,12,8,1,8},
+  {7,17,20,15,11,3,11,0}
+};
+
 uint8_t current_graph_number = 0; // we always start from second element of array. 
 uint8_t current_compass = 1; // In defolt situation starts from going to the North
 uint8_t current_scenario = 1; // Starts from straight line
@@ -102,7 +123,9 @@ bool this_is_the_end = false; // Becomes true when we reach final destination an
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-uint8_t random_path[] = {2,10,9,4,9,8,1,8,9,10,2}; 
+uint8_t random_path[] = {2,10,9,4,9,0,0,0}; 
+uint8_t bay_array[] = {4,5,6,7}; // Bays that we need to visit
+uint8_t current_bay_number = 0; 
 
 void reset(){
   // Reboots the arduino
@@ -130,6 +153,74 @@ void flash_led(){
   else{
     digitalWrite(LED_Blue, 0);
   }
+}
+
+void new_path_define(int x){
+	for (int i = 0; i < 8; ++i) {
+	random_path[i]=paths_matrix[x][i];
+	}
+}
+
+void new_path(int big_goal_graph){
+  int x = random_path[current_graph_number];
+	//Hard coding paths between nodes
+	if (x==1){
+		if (big_goal_graph==4){
+			new_path_define(1);
+		}else if (big_goal_graph==5){
+			new_path_define(2);
+		}else if (big_goal_graph==6){
+			new_path_define(3);
+		}else if (big_goal_graph==7){
+			new_path_define(4);
+		}else{
+			new_path_define(0);
+		}}
+	if (x==3){
+		if (big_goal_graph==4){
+			new_path_define(5);
+		}else if (big_goal_graph==5){
+			new_path_define(6);
+		}else if (big_goal_graph==6){
+			new_path_define(7);
+		}else if (big_goal_graph==7){
+			new_path_define(8);
+		}else{
+			new_path_define(0);
+		}}
+	if (x==4){
+		if (big_goal_graph==1){
+			new_path_define(9);
+		}else if (big_goal_graph==3){
+			new_path_define(10);
+		}else{
+			new_path_define(0);
+		}}
+	if (x==5){
+		if (big_goal_graph==1){
+			new_path_define(11);
+		}else if (big_goal_graph==3){
+			new_path_define(12);
+		}else{
+			new_path_define(0);
+		}}
+	if (x==6){
+		if (big_goal_graph==1){
+			new_path_define(13);
+		}else if (big_goal_graph==3){
+			new_path_define(14);
+		}else{
+			new_path_define(0);
+		}}
+	if (x==7){
+		if (big_goal_graph==1){
+			new_path_define(15);
+		}else if (big_goal_graph==3){
+			new_path_define(16);
+		}else{
+			new_path_define(0);
+		}
+	}
 }
 
 void move(int16_t speed, float rotation_fraction) {
@@ -283,10 +374,13 @@ void simple_mode_of_motion(){
 
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, -0.9);
+    move(main_speed, -0.8);
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
     while (digitalRead(sensorLeft) == 1) {}
+    for (int i = 0; i < 5; i ++){
+      delay(delay_time);
+    }
     } else {
     backwards_left_junction();
   }
@@ -294,10 +388,13 @@ void left_junction(){ // This function must go on as long as you are in the junc
 
 void right_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, 0.9);
+    move(main_speed, 0.8);
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
     while (digitalRead(sensorRight) == 1) {} 
+    for (int i = 0; i < 5; i ++){
+      delay(delay_time);
+    }
     } else {
     backwards_right_junction();
   }
@@ -340,25 +437,6 @@ void backwards(){
     }
   }
 }
-
-// New implement of backwards function
-/*void backwards(float yaw) { // Need to decide if yaw is a global variable or not
-  // Constants for rotation adjustment
-  // Need to develop gyro sensor to get the yaw angle, with a range of -180 to 180 degrees
-  float correctionFactor = 0.05; // Adjust based on your robot's responsiveness
-  float threshold = 10; // Yaw angle threshold for straight movement, 30 degrees is probably a good value
-  
-  // Check yaw angle to decide the movement
-  // fabs is the absolute value function
-  if (fabs(yaw) < threshold) { // Move straight backward if yaw angle is small
-    move(-main_speed, 0);
-  } else if (yaw > 0) { // Positive yaw angle, veering to the right, rotate left
-    move(-main_speed, -correctionFactor * fabs(yaw)); // Adjust rotation based on yaw
-  } else { // Negative yaw angle, veering to the left, rotate right
-    move(-main_speed, correctionFactor * fabs(yaw)); // Adjust rotation based on yaw
-  }
-}*/
-
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
   Serial.print("You have entered the left junction");
@@ -426,9 +504,13 @@ void stop_and_release(){
   }
   digitalWrite(LED_Red, 0);
   digitalWrite(LED_Green, 0);
+  current_bay_number = current_bay_number + 1;
+  new_path(bay_array[current_bay_number]);
+  current_graph_number = 0;
 }
 
-String color_detection() {
+
+void color_detection() {
   uint16_t r, g, b, c, colorTemp, lux;
 
   tcs.getRawData(&r, &g, &b, &c);
@@ -437,10 +519,14 @@ String color_detection() {
 
   if (lux > 4000) {
     Serial.println("red");
+    new_path(3);
+    current_graph_number = 0;
     digitalWrite(LED_Red, 1);
     delay(5000);
   } else if (lux < 4000 && colorTemp > 10000) {
     Serial.println("black");
+    new_path(1);
+    current_graph_number = 0;
     digitalWrite(LED_Green, 1);
     delay(5000);
   } else {
@@ -459,7 +545,7 @@ String color_detection() {
 } **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < 8.0 && random_path[current_graph_number] != 2) || ((random_path[current_graph_number] == 1 || random_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && random_path[current_graph_number] != 2) || ((random_path[current_graph_number] == 1 || random_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
     if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
       if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
       return true;
@@ -480,6 +566,7 @@ void loop() {
 
   if (mode != 0) {
     moving = true;
+
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       time_of_last_junction_detected = millis();
       simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
