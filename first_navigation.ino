@@ -1,5 +1,7 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
+#include <Servo.h>
+Servo mech_servo;
 
 
 #define MAX_RANG (520)  //the max measurement value of the module is 520cm(a little bit longer than effective max range) 
@@ -24,7 +26,8 @@ const uint8_t sensorFarRight = 5;   // Now at the back (near the wheels)
 const uint8_t button = 6;
 const uint8_t LED_Red = 7;
 const uint8_t LED_Green = 8;
-const uint8_t LED_Blue = 10;
+const uint8_t LED_Blue = 9;
+const uint8_t servo_pin = 10;
 
 const uint8_t main_speed = 200;
 const int delay_time = 25; // Time that will be delayed every single time
@@ -200,6 +203,8 @@ void setup() {
   digitalWrite(LED_Red, 0);
   digitalWrite(LED_Green, 0);
   digitalWrite(LED_Blue, 0);
+  mech_servo.attach(servo_pin);
+  mech_servo.write(270); // start vertically, angle is anticlockwise from just past the closed position.
 
   // Initialize the Motor Shield
   if (!AFMS.begin()) {
@@ -257,7 +262,13 @@ void simple_mode_of_motion(){
     Serial.print("NOW WE GO BACKWARDS");
     Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
     stop_and_grab();
+    Serial.println("Picking up a block...");
     Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+  }
+  if ((random_path[current_graph_number] == 1 || random_path[current_graph_number] == 3) && (digitalRead(sensorLeft) && digitalRead(sensorRight))){
+    stop_and_release();
+    // stop and release
+    Serial.println("At the end, releasing block...");
   }
 
 }
@@ -386,9 +397,19 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 
 void stop_and_grab(){
   stop();
-  // Put here code for grabbing
-  for (int i = 0; i < 50; ++i) {
-    delay(delay_time);
+  for (int pos = 270; pos <= 6; pos -= 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15 ms for the servo to reach the position
+  }
+}
+
+void stop_and_release(){
+  stop();
+  for (int pos = 6; pos >= 270; pos += 1) { // goes from 0 degrees to 180 degrees
+    // in steps of 1 degree
+    mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);                       // waits 15 ms for the servo to reach the position
   }
 }
 
@@ -401,7 +422,7 @@ void stop_and_grab(){
 } **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < 10.0 && random_path[current_graph_number] != 2)) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < 13.0 && random_path[current_graph_number] != 2)) { 
     if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
       if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
       return true;
