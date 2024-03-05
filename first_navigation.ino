@@ -231,14 +231,14 @@ void straight_junction(){ // This function must go on as long as you are in the 
 
 void simple_mode_of_motion(){
   int y = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number+1]-1];
-  /**Serial.print("Current graph: ");
+  Serial.print("Current graph: ");
   Serial.println(random_path[current_graph_number]);
   Serial.print("Next graph: ");
   Serial.println(random_path[current_graph_number + 1]);
   Serial.print("Goal compass: ");
   Serial.println(y);
   Serial.print("Current compass: ");
-  Serial.println(current_compass);*//
+  Serial.println(current_compass);
   if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
     Serial.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
@@ -263,7 +263,7 @@ void simple_mode_of_motion(){
 
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, -1);
+    move(main_speed, -0.9);
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
     while (digitalRead(sensorLeft) == 1) {}
@@ -274,7 +274,7 @@ void left_junction(){ // This function must go on as long as you are in the junc
 
 void right_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, 1);
+    move(main_speed, 0.9);
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
     while (digitalRead(sensorRight) == 1) {} 
@@ -303,7 +303,6 @@ void straight(){ // Regular function for going straightforward
   }
 }
 
-/*
 void backwards(){
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);  
@@ -321,10 +320,9 @@ void backwards(){
     }
   }
 }
-*/
 
 // New implement of backwards function
-void backwards(float yaw) { // Need to decide if yaw is a global variable or not
+/*void backwards(float yaw) { // Need to decide if yaw is a global variable or not
   // Constants for rotation adjustment
   // Need to develop gyro sensor to get the yaw angle, with a range of -180 to 180 degrees
   float correctionFactor = 0.05; // Adjust based on your robot's responsiveness
@@ -339,7 +337,7 @@ void backwards(float yaw) { // Need to decide if yaw is a global variable or not
   } else { // Negative yaw angle, veering to the left, rotate right
     move(-main_speed, correctionFactor * fabs(yaw)); // Adjust rotation based on yaw
   }
-}
+}*/
 
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
@@ -394,7 +392,7 @@ void stop_and_grab(){
 } **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0)) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0 && random_path[current_graph_number] != 2)) { 
     if (millis() - time_of_last_junction_detected > 250){
       if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
       return true;
