@@ -3,7 +3,7 @@ void setup(){
 }
 
 int random_path[] = {0,0,0,0,0,0,0,0}; // An old path
-int current_graph = 7; //Current graph value
+int current_graph_number = 7; //Current graph value
 int goal_graph = 3; //Goal graph value
 
 int paths_matrix[17][8]=
@@ -35,7 +35,7 @@ for (int i = 0; i < 8; ++i) {
 
 void new_path(){
 	//Hard coding paths between nodes
-	if (current_graph==1){
+	if (current_graph_number==1){
 		if (goal_graph==4){
 			new_path_define(1);
 		}else if (goal_graph==5){
@@ -47,7 +47,7 @@ void new_path(){
 		}else{
 			new_path_define(0);
 		}}
-	if (current_graph==3){
+	if (current_graph_number==3){
 		if (goal_graph==4){
 			new_path_define(5);
 		}else if (goal_graph==5){
@@ -59,7 +59,7 @@ void new_path(){
 		}else{
 			new_path_define(0);
 		}}
-	if (current_graph==4){
+	if (current_graph_number==4){
 		if (goal_graph==1){
 			new_path_define(9);
 		}else if (goal_graph==3){
@@ -67,7 +67,7 @@ void new_path(){
 		}else{
 			new_path_define(0);
 		}}
-	if (current_graph==5){
+	if (current_graph_number==5){
 		if (goal_graph==1){
 			new_path_define(11);
 		}else if (goal_graph==3){
@@ -75,7 +75,7 @@ void new_path(){
 		}else{
 			new_path_define(0);
 		}}
-	if (current_graph==6){
+	if (current_graph_number==6){
 		if (goal_graph==1){
 			new_path_define(13);
 		}else if (goal_graph==3){
@@ -83,7 +83,7 @@ void new_path(){
 		}else{
 			new_path_define(0);
 		}}
-	if (current_graph==7){
+	if (current_graph_number==7){
 		if (goal_graph==1){
 			new_path_define(15);
 		}else if (goal_graph==3){
