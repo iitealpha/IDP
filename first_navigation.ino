@@ -1,6 +1,7 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
 
+
 #define MAX_RANG (520)  //the max measurement value of the module is 520cm(a little bit longer than effective max range) 
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 
@@ -92,7 +93,7 @@ bool this_is_the_end = false; // Becomes true when we reach final destination an
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-uint8_t random_path[] = {12,13,18,6,18,16,17,20,15,11,10}; 
+uint8_t random_path[] = {2,10,9,4,9,8,12,13,18,6,18,16,17,20,15,11,10}; 
 
 void reset(){
   // Reboots the arduino
