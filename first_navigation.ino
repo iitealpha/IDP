@@ -1,6 +1,8 @@
 #include <Adafruit_MotorShield.h>
 #include "utility/Adafruit_MS_PWMServoDriver.h"
 #include <Servo.h>
+#include "Adafruit_TCS34725.h"
+#include <Wire.h>
 Servo mech_servo;
 
 
@@ -28,6 +30,10 @@ const uint8_t LED_Red = 7;
 const uint8_t LED_Green = 8;
 const uint8_t LED_Blue = 9;
 const uint8_t servo_pin = 10;
+
+//cube color, 1 for red, 2 for black, 3 for nothing, 0 for error
+Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
+const uint8_t cube_color = 0;
 
 const uint8_t main_speed = 200;
 const int delay_time = 25; // Time that will be delayed every single time
@@ -96,7 +102,7 @@ bool this_is_the_end = false; // Becomes true when we reach final destination an
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-uint8_t random_path[] = {2,10,9,4,9,8,12,13,18,6,18,16,17,20,15,11,10}; 
+uint8_t random_path[] = {2,10,9,4,9,8,1,8,9,10,2}; 
 
 void reset(){
   // Reboots the arduino
@@ -258,18 +264,20 @@ void simple_mode_of_motion(){
   } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
     straight_junction();
   } else { // Go backwards
-    this_is_the_end = true;
-    Serial.print("NOW WE GO BACKWARDS");
-    Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-    stop_and_grab();
-    Serial.println("Picking up a block...");
-    Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-  }
-  if ((random_path[current_graph_number] == 1 || random_path[current_graph_number] == 3) && (digitalRead(sensorLeft) && digitalRead(sensorRight))){
-    stop_and_release();
-    // stop and release
-    Serial.println("At the end, releasing block...");
-  }
+    if ((random_path[current_graph_number] != 1 && random_path[current_graph_number] != 3)){
+      this_is_the_end = true;
+      Serial.print("NOW WE GO BACKWARDS");
+      Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+      stop_and_grab();
+      Serial.println("Picking up a block...");
+      color_detection();
+      Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+    } else {
+      stop_and_release();
+      // stop and release
+      Serial.println("At the end, releasing block...");
+      } 
+    }
 
 }
 
@@ -397,20 +405,49 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 
 void stop_and_grab(){
   stop();
-  for (int pos = 270; pos <= 6; pos -= 1) { // goes from 0 degrees to 180 degrees
+  Serial.println("Car was stopped and now we are trying to grab the block");
+  for (int pos = 270; pos >=6; pos -= 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
+    // Serial.println("current pos: " + String(pos));
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(15);                       // waits 15 ms for the servo to reach the position
+    delay(15);
+    //if(pos%10==0){
+    //  Serial.println("written mech done") ;}                      // waits 15 ms for the servo to reach the position
   }
+  Serial.println("Block was grabbed");
 }
 
 void stop_and_release(){
   stop();
-  for (int pos = 6; pos >= 270; pos += 1) { // goes from 0 degrees to 180 degrees
+  for (int pos = 6; pos <= 270; pos += 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);                       // waits 15 ms for the servo to reach the position
   }
+  digitalWrite(LED_Red, 0);
+  digitalWrite(LED_Green, 0);
+}
+
+String color_detection() {
+  uint16_t r, g, b, c, colorTemp, lux;
+
+  tcs.getRawData(&r, &g, &b, &c);
+  colorTemp = tcs.calculateColorTemperature(r, g, b);
+  lux = tcs.calculateLux(r, g, b);
+
+  if (lux > 4000) {
+    Serial.println("red");
+    digitalWrite(LED_Red, 1);
+    delay(5000);
+  } else if (lux < 4000 && colorTemp > 10000) {
+    Serial.println("black");
+    digitalWrite(LED_Green, 1);
+    delay(5000);
+  } else {
+    Serial.println("no block");
+    delay(5000);
+  }
+
 }
 
 /**void reverse(){
@@ -422,7 +459,7 @@ void stop_and_release(){
 } **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < 13.0 && random_path[current_graph_number] != 2)) { 
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[random_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < 8.0 && random_path[current_graph_number] != 2) || ((random_path[current_graph_number] == 1 || random_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
     if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
       if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[random_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
       return true;
