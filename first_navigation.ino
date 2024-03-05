@@ -43,6 +43,7 @@ unsigned long first_press_time = millis();
 const float signal_distance = 10.0;
 
 float dist_t, sensity_t; 
+float current_rot_frac = 0; 
 
 // map_names = [1,2,3,4,...20]
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
@@ -126,6 +127,28 @@ bool moving;  // True if moving, for flashing LED.
 uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
 uint8_t bay_array[] = {4,5,6,7}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
+
+
+
+void new_path_define(int x);
+void new_path(int big_goal_graph);
+void move(int16_t speed, float rotation_fraction);
+void stop();
+void button_press_ISR();
+void straight_junction();
+void simple_mode_of_motion();
+void left_junction();
+void right_junction();
+void backwards();
+void straight();
+void backwards_left_junction();
+void backwards_right_junction();
+void stop_and_grab();
+void stop_and_release();
+void color_detection();
+bool junction_detected();
+
+
 
 void reset(){
   // Reboots the arduino
@@ -284,50 +307,31 @@ void button_press_ISR(){
   }
 }
 
-void setup() {
-  Serial.begin(9600); // Start serial communication
-  Serial.println("Starting...");
 
-  // Set sensor pins as input
-  pinMode(sensorFarLeft, INPUT);
-  pinMode(sensorLeft, INPUT);
-  pinMode(sensorRight, INPUT);
-  pinMode(sensorFarRight, INPUT);
-  pinMode(button, INPUT);
-  pinMode(LED_Red, OUTPUT);
-  pinMode(LED_Green, OUTPUT);
-  pinMode(LED_Blue, OUTPUT);
-  digitalWrite(LED_Red, 0);
-  digitalWrite(LED_Green, 0);
-  digitalWrite(LED_Blue, 0);
-  mech_servo.attach(servo_pin);
-  mech_servo.write(270); // start vertically, angle is anticlockwise from just past the closed position.
-
-  // Initialize the Motor Shield
-  if (!AFMS.begin()) {
-    Serial.println("Motor Shield not found.");
-    while (1); // Halt if shield not found
-  }
-  Serial.println("Motor Shield initialized.");
-
-  // Button Interrupt:
-  attachInterrupt(digitalPinToInterrupt(button), button_press_ISR, RISING);
-
-  // Timer Interrupt:
-  // Timer A (used as clock for B) clocked at 250kHz.
-  TCB0.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
-  TCB0.CCMP = 62500; // Value to compare with. 62500 gives 2Hz.
-  TCB0.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
-  TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
-
-  current_compass = 1;
-}
 
 void straight_junction(){ // This function must go on as long as you are in the junction
-  Serial.println("Go straight in junction");
-  while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
-    straight(); 
-  } 
+  if (this_is_the_end == false){
+    Serial.println("Go straight in junction");
+    while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
+      straight(); 
+    } 
+  } else if(current_path[current_graph_number] == 8) { // Anticklokwise
+    move(main_speed, -1);
+    while (digitalRead(sensorLeft) == 1) {}
+    while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
+    while (digitalRead(sensorLeft) == 1) {}
+    while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
+    while (digitalRead(sensorLeft) == 1) {}
+    this_is_the_end = false;
+  } else {
+    move(main_speed, 1);
+    while (digitalRead(sensorRight) == 1) {}
+    while (digitalRead(sensorRight) == 0) {} // While right sensor is outside of its first line, move it to the line
+    while (digitalRead(sensorRight) == 1) {}
+    while (digitalRead(sensorRight) == 0) {} // While right sensor is outside of its first line, move it to the line
+    while (digitalRead(sensorRight) == 1) {}
+    this_is_the_end = false;
+  }
   //Serial.println("Straight junction is done");
   delay(delay_time);
 }
@@ -355,8 +359,8 @@ void simple_mode_of_motion(){
   } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
     straight_junction();
   } else { // Go backwards
+    this_is_the_end = true;
     if ((current_path[current_graph_number] != 1 && current_path[current_graph_number] != 3)){
-      this_is_the_end = true;
       Serial.print("NOW WE GO BACKWARDS");
       Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
       stop_and_grab();
@@ -400,25 +404,6 @@ void right_junction(){ // This function must go on as long as you are in the jun
   }
 }
 
-void straight(){ // Regular function for going straightforward
-  bool right = digitalRead(sensorRight);
-  bool left = digitalRead(sensorLeft);
-    if (this_is_the_end == false) {
-    if (right && !left) { //Move right
-      move(main_speed, 0.5);
-    } else if (!right && left) { //Move to the left
-      move(main_speed, -0.5);
-    } else if (!right && !left) { // Includes both going 
-      move(main_speed, 0);
-    } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
-      for (int i = 0; i < 5; ++i) {
-        move(main_speed, 0);
-        delay(delay_time);
-      }}
-  } else {
-    backwards();
-  }
-}
 
 void backwards(){
   bool right = digitalRead(sensorRight);
@@ -435,6 +420,40 @@ void backwards(){
       move(-main_speed, 0);
       delay(delay_time);
     }
+  }
+}
+
+void straight(){ // Regular function for going straightforward
+  bool right = digitalRead(sensorRight);
+  bool left = digitalRead(sensorLeft);
+  if (this_is_the_end == false) {
+    if (right && !left) { //Move right
+      if (current_rot_frac != 0.5){
+        move(main_speed, 0.5);
+        current_rot_frac = 0.5;
+      }
+    } else if (!right && left) { //Move to the left
+      if (right && !left) { //Move right
+        if (current_rot_frac != -0.5){
+          move(main_speed, -0.5);
+          current_rot_frac = -0.5;
+        }
+      }
+    } else if (!right && !left) { // Includes both going 
+      if (right && !left) { //Move right
+        if (current_rot_frac != 0.0){
+          move(main_speed, 0.0);
+          current_rot_frac = 0.0;
+        }
+      }
+    } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
+      for (int i = 0; i < 5; ++i) {
+        move(main_speed, 0);
+        delay(delay_time);
+      }
+    }
+  } else {
+    backwards();
   }
 }
 
@@ -545,7 +564,7 @@ void color_detection() {
 } **/ // If you ever decide to turn by 180 degrees call this function
 
 bool junction_detected(){
-  float distance_from_wall = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION)
+  float distance_from_wall = abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
   if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && distance_from_wall < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
   //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
 //    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
@@ -554,11 +573,51 @@ bool junction_detected(){
     //} else {
     //  Serial.println("TOO EARLY");
     //  return false;
-    }
   } else {
     return false; 
   }
 }
+
+
+void setup() {
+  Serial.begin(9600); // Start serial communication
+  Serial.println("Starting...");
+
+  // Set sensor pins as input
+  pinMode(sensorFarLeft, INPUT);
+  pinMode(sensorLeft, INPUT);
+  pinMode(sensorRight, INPUT);
+  pinMode(sensorFarRight, INPUT);
+  pinMode(button, INPUT);
+  pinMode(LED_Red, OUTPUT);
+  pinMode(LED_Green, OUTPUT);
+  pinMode(LED_Blue, OUTPUT);
+  digitalWrite(LED_Red, 0);
+  digitalWrite(LED_Green, 0);
+  digitalWrite(LED_Blue, 0);
+  mech_servo.attach(servo_pin);
+  mech_servo.write(270); // start vertically, angle is anticlockwise from just past the closed position.
+
+  // Initialize the Motor Shield
+  if (!AFMS.begin()) {
+    Serial.println("Motor Shield not found.");
+    while (1); // Halt if shield not found
+  }
+  Serial.println("Motor Shield initialized.");
+
+  // Button Interrupt:
+  attachInterrupt(digitalPinToInterrupt(button), button_press_ISR, RISING);
+
+  // Timer Interrupt:
+  // Timer A (used as clock for B) clocked at 250kHz.
+  TCB0.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
+  TCB0.CCMP = 62500; // Value to compare with. 62500 gives 2Hz.
+  TCB0.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
+  TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
+
+  current_compass = 1;
+}
+
 
 void loop() {
   bool farLeft = digitalRead(sensorFarLeft);
@@ -568,6 +627,7 @@ void loop() {
 
   if (mode != 0) {
     moving = true;
+    move(main_speed, current_rot_frac);
 
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       time_of_last_junction_detected = millis();
