@@ -231,14 +231,14 @@ void straight_junction(){ // This function must go on as long as you are in the 
 
 void simple_mode_of_motion(){
   int y = better_map_of_directions[random_path[current_graph_number]-1][random_path[current_graph_number+1]-1];
-  //Serial.println("Current graph");
-  //Serial.println(random_path[current_graph_number]);
-  //Serial.println("Next graph");
-  //Serial.println(random_path[current_graph_number + 1]);
-  //Serial.println("Goal compass");
-  //Serial.println(y);
-  //Serial.println("Current compass");
-  //Serial.println(current_compass);
+  /**Serial.print("Current graph: ");
+  Serial.println(random_path[current_graph_number]);
+  Serial.print("Next graph: ");
+  Serial.println(random_path[current_graph_number + 1]);
+  Serial.print("Goal compass: ");
+  Serial.println(y);
+  Serial.print("Current compass: ");
+  Serial.println(current_compass);*//
   if (random_path[current_graph_number] == 19 || random_path[current_graph_number] == 20){
     Serial.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
@@ -387,8 +387,6 @@ bool junction_detected(){
 }
 
 void loop() {
-  //random_path = {2,10,11,15,20,17,7,7,17,16,18,13,12,8,1};
-  
   bool farLeft = digitalRead(sensorFarLeft);
   bool left = digitalRead(sensorLeft);
   bool right = digitalRead(sensorRight);
