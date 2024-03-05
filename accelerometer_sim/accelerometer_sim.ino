@@ -1,3 +1,5 @@
+#include <SparkFunLSM6DS3.h>
+
 //#include <SPI.h>
 //#include <Wire.h>  
 //reference: https://arduino.stackexchange.com/questions/78986/arduino-nano-33-iot-lsm6ds3-get-gyro-angle-in-degrees
