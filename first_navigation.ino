@@ -303,6 +303,7 @@ void straight(){ // Regular function for going straightforward
   }
 }
 
+/*
 void backwards(){
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);  
@@ -320,6 +321,26 @@ void backwards(){
     }
   }
 }
+*/
+
+// New implement of backwards function
+void backwards(float yaw) { // Need to decide if yaw is a global variable or not
+  // Constants for rotation adjustment
+  // Need to develop gyro sensor to get the yaw angle, with a range of -180 to 180 degrees
+  float correctionFactor = 0.05; // Adjust based on your robot's responsiveness
+  float threshold = 10; // Yaw angle threshold for straight movement, 30 degrees is probably a good value
+  
+  // Check yaw angle to decide the movement
+  // fabs is the absolute value function
+  if (fabs(yaw) < threshold) { // Move straight backward if yaw angle is small
+    move(-main_speed, 0);
+  } else if (yaw > 0) { // Positive yaw angle, veering to the right, rotate left
+    move(-main_speed, -correctionFactor * fabs(yaw)); // Adjust rotation based on yaw
+  } else { // Negative yaw angle, veering to the left, rotate right
+    move(-main_speed, correctionFactor * fabs(yaw)); // Adjust rotation based on yaw
+  }
+}
+
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
   Serial.print("You have entered the left junction");
