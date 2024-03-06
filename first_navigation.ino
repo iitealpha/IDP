@@ -213,6 +213,7 @@ void flash_led(){
 void stop(){
   myMotor1->run(RELEASE);
   myMotor2->run(RELEASE);
+  moving = false;
 }
 
 
@@ -314,6 +315,7 @@ void move(int16_t speed, float rotation_fraction) {
   int16_t other_speed = 0;
   int16_t v_left = 0;
   int16_t v_right = 0;
+  moving = true;
 
   if (speed != current_speed || current_rot_frac != rotation_fraction) {
 
@@ -741,8 +743,7 @@ void loop() {
   bool right = digitalRead(sensorRight);
   bool farRight = digitalRead(sensorFarRight);
 
-  if (mode != 0) {
-    moving = true;   
+  if (mode != 0) {  
     measure_distance();
     current_wall_distance = distance_history[distance_history_pointer];
     // if entering a bay:
@@ -783,7 +784,6 @@ void loop() {
     delay(delay_time); 
   } else {
     stop();
-    moving = false;
   }
 
 
