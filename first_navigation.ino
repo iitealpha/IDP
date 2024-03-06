@@ -138,7 +138,7 @@ uint8_t distance_history_datapoints = 0; // increases until full
 // Comparing latest value to the average:
 // robot max speed around 20cm/s, but will be less when going into a bay.
 // max deviation = fudge_factor * ((num_samples/2) * max_distance_per_sample (assuming constant speed))
-const float max_acceptable_deviation = 2 * (0.5 * distance_history_length * 20 * ULTRASONIC_SAMPLE_PERIOD / 1000);
+const float max_acceptable_deviation = 3 * (0.5 * distance_history_length * 20 * delay_time / 1000);
 float current_wall_distance = 0; // Use this for all distance measurements, updated only when value is acceptable.
 
 
@@ -162,6 +162,8 @@ void color_detection();
 int spike_in_distance();
 bool junction_detected();
 
+int16_t current_speed = 0; 
+float current_rot_frac = 0; 
 
 
 
@@ -179,7 +181,7 @@ ISR(TCB0_INT_vect){
   TCB0.INTFLAGS = TCB_CAPT_bm;
 }
 
-ISR(TCB1_INT_vect){
+void measure_distance(){
   // Take distaance reading:
   distance_history_pointer = (distance_history_pointer + 1) % distance_history_length;
   distance_history[distance_history_pointer] = analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION;
@@ -187,7 +189,7 @@ ISR(TCB1_INT_vect){
     distance_history_datapoints ++; // increase unless full
   }
   // Clear interrupt flag
-  TCB1.INTFLAGS = TCB_CAPT_bm;
+  //TCB1.INTFLAGS = TCB_CAPT_bm;
 }
 
 void flash_led(){
@@ -282,57 +284,43 @@ void move(int16_t speed, float rotation_fraction) {
   int16_t v_left = 0;
   int16_t v_right = 0;
 
-  if (rotation_fraction > 0) {
-    other_speed = speed - 2*rotation_fraction*speed;
-  } else {
-    other_speed = speed + 2*rotation_fraction*speed;
-  }
+  if (speed != current_speed || current_rot_frac != rotation_fraction) {
 
-  if (((rotation_fraction>0) && (speed<0)) || ((rotation_fraction<0) && (speed>0))){
-    v_left = speed;
-    v_right = other_speed;
-  } else {
-    v_right = speed;
-    v_left = other_speed;
-  }
-
-  myMotor1->setSpeed(abs(v_left)); 
-  myMotor2->setSpeed(abs(v_right));
-
-  if (mode != 0) {
-    if (v_left > 0) {
-      myMotor1->run(FORWARD);
+    if (rotation_fraction > 0) {
+      other_speed = speed - 2*rotation_fraction*speed;
     } else {
-      myMotor1->run(BACKWARD);
+      other_speed = speed + 2*rotation_fraction*speed;
     }
-    if (v_right > 0) {
-      myMotor2->run(FORWARD);
-    } else {
-      myMotor2->run(BACKWARD);
-    }} else {
-      stop();
-    }
-}
 
-void stop(){
-  myMotor1->run(RELEASE);
-  myMotor2->run(RELEASE);
-}
-
-void button_press_ISR(){
-  // Debounce button
-  unsigned long new_time = millis();
-  if (millis() > (first_press_time + 300)){
-    if (mode == 0) {
-      mode = 1; 
+    if (((rotation_fraction>0) && (speed<0)) || ((rotation_fraction<0) && (speed>0))){
+      v_left = speed;
+      v_right = other_speed;
     } else {
-      //mode = 0;
-      reset();  // To stop the robot, reset arduino.
+      v_right = speed;
+      v_left = other_speed;
     }
-    first_press_time = new_time;
+
+    myMotor1->setSpeed(abs(v_left)); 
+    myMotor2->setSpeed(abs(v_right));
+
+    if (mode != 0) {
+      if (v_left > 0) {
+        myMotor1->run(FORWARD);
+      } else {
+        myMotor1->run(BACKWARD);
+      }
+      if (v_right > 0) {
+        myMotor2->run(FORWARD);
+      } else {
+        myMotor2->run(BACKWARD);
+      }
+    } else {
+        stop();
+    }
+    current_rot_frac = rotation_fraction;
+    current_speed = speed;
   }
 }
-
 
 
 void straight_junction(){ // This function must go on as long as you are in the junction
@@ -406,13 +394,10 @@ void simple_mode_of_motion(){
 
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, -0.8);
+    move(main_speed, -0.7);
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
-    while (digitalRead(sensorLeft) == 1) {}
-    for (int i = 0; i < 5; i ++){
-      delay(delay_time);
-    }
+    //while (digitalRead(sensorLeft) == 1) {}
     } else {
     backwards_left_junction();
   }
@@ -420,13 +405,10 @@ void left_junction(){ // This function must go on as long as you are in the junc
 
 void right_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, 0.8);
+    move(main_speed, 0.7);
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
-    while (digitalRead(sensorRight) == 1) {} 
-    for (int i = 0; i < 5; i ++){
-      delay(delay_time);
-    }
+    //while (digitalRead(sensorRight) == 1) {} 
     } else {
     backwards_right_junction();
   }
@@ -456,24 +438,11 @@ void straight(){ // Regular function for going straightforward
   bool left = digitalRead(sensorLeft);
   if (this_is_the_end == false) {
     if (right && !left) { //Move right
-      if (current_rot_frac != 0.5){
-        move(main_speed, 0.5);
-        current_rot_frac = 0.5;
-      }
+      move(main_speed, 0.5);
     } else if (!right && left) { //Move to the left
-      if (right && !left) { //Move right
-        if (current_rot_frac != -0.5){
-          move(main_speed, -0.5);
-          current_rot_frac = -0.5;
-        }
-      }
+      move(main_speed, -0.5);
     } else if (!right && !left) { // Includes both going 
-      if (right && !left) { //Move right
-        if (current_rot_frac != 0.0){
-          move(main_speed, 0.0);
-          current_rot_frac = 0.0;
-        }
-      }
+      move(main_speed, 0.0);
     } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
       for (int i = 0; i < 5; ++i) {
         move(main_speed, 0);
@@ -676,10 +645,10 @@ void setup() {
   TCB0.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
 
   // Timer interrupt for taking distance readings:
-  TCB1.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
-  TCB1.CCMP = 125 * ULTRASONIC_SAMPLE_PERIOD; // Value to compare with. 125 gives 1ms
-  TCB1.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
-  TCB1.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
+  //TCB1.CTRLB = TCB_CNTMODE_INT_gc; // Use timer compare mode
+  //TCB1.CCMP = 125 * ULTRASONIC_SAMPLE_PERIOD; // Value to compare with. 125 gives 1ms
+  //TCB1.INTCTRL = TCB_CAPT_bm; // Enable the interrupt
+  //TCB1.CTRLA = TCB_CLKSEL_CLKTCA_gc | TCB_ENABLE_bm; // Use Timer A as clock, enable timer
 
   current_compass = 1;
 }
@@ -693,24 +662,25 @@ void loop() {
 
   if (mode != 0) {
     moving = true;   
-
+    measure_distance();
+    current_wall_distance = distance_history[distance_history_pointer];
     // if entering a bay:
     // may need to add parking bay to this (current_path[current_graph_number] == 2)
-    if (current_path[current_graph_number] == 4 || current_path[current_graph_number] == 5 || current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){
+    if (false){//(current_path[current_graph_number] == 4 || current_path[current_graph_number] == 5 || current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){
       move(slow_speed, 0);
       //
       if (spike_in_distance() == -1){
-        Serial.println("Distance has suddenly decreased, correcting...")
+        Serial.println("Distance has suddenly decreased, correcting...");
         // distance has suddenly got smaller.
         // ultrasonic sensor on left side, so must be pointing slightly right, therefore correct by turning left (anticlockwise).
         move(slow_speed, 0.1);
-        delay(ULTRASONIC_SAMPLE_PERIOD);
+        delay(delay_time);
         while(spike_in_distance != 1){
           // keep correcting until distance gets larger again.
           delay(ULTRASONIC_SAMPLE_PERIOD);
         }
         move(slow_speed, 0);
-        Serial.println("Now seeing the wall again.")
+        Serial.println("Now seeing the wall again.");
       }
 
     }
