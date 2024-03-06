@@ -50,7 +50,7 @@ float dist_t, sensity_t;
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 5, 14,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
+const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 5, 10,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
@@ -58,21 +58,22 @@ const uint8_t better_map_of_directions[20][20] = { // First coordinate is curren
 {0,0,5,0,0,  0,0,0,0,0,     1,0,0,0,0,  0,0,0,0,0},
 {0,0,0,5,0,  0,0,0,3,0,     0,0,0,0,0,  0,0,0,0,0},
 {0,0,0,0,5,  0,0,0,0,0,     0,0,0,1,0,  0,0,0,0,0},
+
 {0,0,0,0,0,  5,0,0,0,0,     0,0,0,0,0,  0,0,2,0,0},
 {0,0,0,0,0,  0,5,0,0,0,     0,0,0,0,0,  0,1,0,0,0},
-
 {3,0,0,0,0,  0,0,0,2,0,     0,1,0,0,0,  0,0,0,0,0}, //8
 {0,0,0,1,0,  0,0,4,0,2,     0,0,0,0,0,  0,0,0,0,0},
 {0,3,0,0,0,  0,0,0,4,0,     2,0,0,0,0,  0,0,0,0,0},
+
 {0,0,3,0,0,  0,0,0,0,4,     0,0,0,0,1,  0,0,0,0,0}, //11
 {0,0,0,0,0,  0,0,3,0,0,     0,0,2,0,0,  0,0,0,1,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,4,0,2,0,  0,0,1,0,0},
 {0,0,0,0,3,  0,0,0,0,0,     0,0,4,0,2,  0,0,0,0,0}, //14
 {0,0,0,0,0,  0,0,0,0,0,     3,0,0,4,0,  0,0,0,0,1},
+
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,0,  0,2,3,4,0},
 {0,0,0,0,0,  0,3,0,0,0,     0,0,0,0,0,  4,0,0,0,2}, //17
 {0,0,0,0,0,  4,0,0,0,0,     0,0,3,0,0,  1,0,0,0,0},
-
 {0,0,0,0,0,  0,0,0,0,0,     0,3,0,0,0,  2,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,3,  0,4,0,0,0}};
 
@@ -129,9 +130,9 @@ bool this_is_the_end = false; // Becomes true when we reach final destination an
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-//uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
-uint8_t current_path[] = {2,10,11,15,20,17,7,17}; 
-uint8_t bay_array[] = {7,6,4,5}; // Bays that we need to visit
+uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
+//uint8_t current_path[] = {2,10,11,15,20,17,7,17}; 
+uint8_t bay_array[] = {4,5,6,7};//{7,6,4,5}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
 const uint8_t distance_history_length = 10;
@@ -359,7 +360,9 @@ void straight_junction(){ // This function must go on as long as you are in the 
     Serial.println("Go straight in junction");
     while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
       straight(); 
-    } 
+      Serial.println("on it!");
+    }
+    Serial.println("done?");
   } else if(current_path[current_graph_number] == 8) { // Turn 180 degrees anticlockwise at a T-junction, i.e. stop turning after crossing second white line.
     move(main_speed, -1);
     for (int i = 0; i < 5; i++){
@@ -433,6 +436,8 @@ void left_junction(){ // This function must go on as long as you are in the junc
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
     //while (digitalRead(sensorLeft) == 1) {}
+    move(main_speed, 0.7);
+    delay(30);
     if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){ //Problematic bays, please wait before making any decisions
       for (int i = 0; i < 20; i++) {
         straight();
