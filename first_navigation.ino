@@ -604,16 +604,16 @@ int spike_in_distance(){
     average += distance_history[i];
   }
   average /= distance_history_datapoints; // calculate mean
-  
-  if ((distance_history[distance_history_pointer] - average) > max_acceptable_deviation){
+  current_wall_distance = distance_history[distance_history_pointer];
+  if ((current_wall_distance - average) > max_acceptable_deviation){
     // Distance has suddenly increased, need to reset the history so that further changes can be detected
-    distance_history[0] = distance_history[distance_history_pointer]; // use last value as first in the reset history
+    distance_history[0] = current_wall_distance; // use last value as first in the reset history
     distance_history_pointer = 1;
     distance_history_datapoints = 1;
     return 1;
-  } else if ((distance_history[distance_history_pointer] - average) < -max_acceptable_deviation){
+  } else if ((current_wall_distance - average) < -max_acceptable_deviation){
     // Distance has decreased significantly, same process as above.
-    distance_history[0] = distance_history[distance_history_pointer]; // use last value as first in the reset history
+    distance_history[0] = current_wall_distance; // use last value as first in the reset history
     distance_history_pointer = 1;
     distance_history_datapoints = 1;
     return -1;
@@ -700,6 +700,7 @@ void loop() {
       move(slow_speed, 0);
       //
       if (spike_in_distance() == -1){
+        Serial.println("Distance has suddenly decreased, correcting...")
         // distance has suddenly got smaller.
         // ultrasonic sensor on left side, so must be pointing slightly right, therefore correct by turning left (anticlockwise).
         move(slow_speed, 0.1);
@@ -708,8 +709,9 @@ void loop() {
           // keep correcting until distance gets larger again.
           delay(ULTRASONIC_SAMPLE_PERIOD);
         }
+        move(slow_speed, 0);
+        Serial.println("Now seeing the wall again.")
       }
-      current_wall_distance = distance_history[distance_history_pointer];
 
     }
     else{
