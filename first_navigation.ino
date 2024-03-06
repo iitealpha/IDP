@@ -100,7 +100,7 @@ const int map_of_sizes[20][20] = { // First coordinate is current graph, second 
 {0,0,0,0,0,  0,0,0,0,0,     0,640,0,0,0,  900,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,640,  0,510,0,0,0}};
 
-int paths_matrix[17][8]={
+int paths_matrix[19][8]={
   {0,0,0,0,0,0,0,0},
   {1,8,9,4,9,0,0,0},
   {1,8,12,13,14,5,14,0},
@@ -117,7 +117,9 @@ int paths_matrix[17][8]={
   {6,18,13,12,8,1,8,0},
   {6,18,13,14,15,11,3,11},
   {7,17,16,19,12,8,1,8},
-  {7,17,20,15,11,3,11,0}
+  {7,17,20,15,11,3,11,0},
+  {1,8,9,10,2,0,0,0},
+  {3,11,10,2,0,0,0,0}
 };
 
 uint8_t current_graph_number = 0; // we always start from second element of array. 
@@ -127,8 +129,9 @@ bool this_is_the_end = false; // Becomes true when we reach final destination an
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
-uint8_t bay_array[] = {4,5,6,7}; // Bays that we need to visit
+//uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
+uint8_t current_path[] = {2,10,11,15,20,17,7,17}; 
+uint8_t bay_array[] = {7,6,4,5}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
 const uint8_t distance_history_length = 10;
@@ -247,6 +250,8 @@ void new_path(int big_goal_graph){
 			new_path_define(3);
 		}else if (big_goal_graph==7){
 			new_path_define(4);
+    }else if (big_goal_graph==2){
+      new_path_define(17);
 		}else{
 			new_path_define(0);
 		}}
@@ -259,6 +264,8 @@ void new_path(int big_goal_graph){
 			new_path_define(7);
 		}else if (big_goal_graph==7){
 			new_path_define(8);
+    }else if (big_goal_graph==2){
+      new_path_define(18);
 		}else{
 			new_path_define(0);
 		}}
@@ -417,7 +424,7 @@ void simple_mode_of_motion(){
 
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-        if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11) {
+        if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11 || current_path[current_graph_number] == 12 || current_path[current_graph_number] == 15) {
       move(main_speed, -1.0);
     }
     else {
@@ -426,6 +433,12 @@ void left_junction(){ // This function must go on as long as you are in the junc
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
     //while (digitalRead(sensorLeft) == 1) {}
+    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){ //Problematic bays, please wait before making any decisions
+      for (int i = 0; i < 20; i++) {
+        straight();
+        delay(25);
+      }
+    }
     } else {
     backwards_left_junction();
   }
@@ -433,7 +446,7 @@ void left_junction(){ // This function must go on as long as you are in the junc
 
 void right_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11) {
+    if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11 || current_path[current_graph_number] == 12 || current_path[current_graph_number] == 15) {
       move(main_speed, 1.0);
     }
     else {
@@ -442,6 +455,14 @@ void right_junction(){ // This function must go on as long as you are in the jun
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
     //while (digitalRead(sensorRight) == 1) {} 
+
+    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){ //Problematic bays, please wait before making any decisions
+      for (int i = 0; i < 20; i++) {
+        straight();
+        delay(25);
+      }
+    }
+
     } else {
     backwards_right_junction();
   }
@@ -560,31 +581,38 @@ void stop_and_release(){
 
 
 void color_detection() {
+  delay(500);
   uint16_t r, g, b, c, colorTemp, lux;
 
-  tcs.getRawData(&r, &g, &b, &c);
-  colorTemp = tcs.calculateColorTemperature(r, g, b);
-  lux = tcs.calculateLux(r, g, b);
-  Serial.print("colour: (lux, temp) ");
-  Serial.print(lux);
-  Serial.print(", ");
-  Serial.println(colorTemp);
+  while (true){
 
-  if (lux > 4000) {
-    Serial.println("red");
-    new_path(3);
-    current_graph_number = 0;
-    digitalWrite(LED_Red, 1);
-    delay(5000);
-  } else if (lux < 4000 && colorTemp > 10000) { // change to less than 4000?
-    Serial.println("black");
-    new_path(1);
-    current_graph_number = 0;
-    digitalWrite(LED_Green, 1);
-    delay(5000);
-  } else {
-    Serial.println("no block");
-    delay(5000);
+    tcs.getRawData(&r, &g, &b, &c);
+    colorTemp = tcs.calculateColorTemperature(r, g, b);
+    lux = tcs.calculateLux(r, g, b);
+    Serial.print("colour: (lux, temp) ");
+    Serial.print(lux);
+    Serial.print(", ");
+    Serial.println(colorTemp);
+
+    if (lux > 4000) {
+      Serial.println("red");
+      new_path(3);
+      current_graph_number = 0;
+      digitalWrite(LED_Red, 1);
+      delay(5000);
+      break;
+    } else if (lux < 4000 && colorTemp > 10000) { // change to less than 4000?
+      Serial.println("black");
+      new_path(1);
+      current_graph_number = 0;
+      digitalWrite(LED_Green, 1);
+      delay(5000);
+      break;
+    } else {
+      //Serial.println("no block");
+      // add wait 10 seconds then decide no block
+      delay(100);
+    }
   }
 
 }
