@@ -50,7 +50,7 @@ float dist_t, sensity_t;
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const float distances_from_bays[20] = {28.5, 9, 28.5, 14, 14, 9, 18,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1
+const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 5, 14,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
@@ -205,6 +205,29 @@ void flash_led(){
     digitalWrite(LED_Blue, 0);
   }
 }
+
+void stop(){
+  myMotor1->run(RELEASE);
+  myMotor2->run(RELEASE);
+}
+
+
+void button_press_ISR(){
+  // Debounce button
+  unsigned long new_time = millis();
+  if (millis() > (first_press_time + 300)){
+    if (mode == 0) {
+      mode = 1; 
+    } else {
+      //mode = 0;
+      reset();  // To stop the robot, reset arduino.
+    }
+    first_press_time = new_time;
+  }
+}
+
+
+
 
 void new_path_define(int x){
 	for (int i = 0; i < 8; ++i) {
@@ -394,7 +417,12 @@ void simple_mode_of_motion(){
 
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, -0.7);
+        if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11) {
+      move(main_speed, -1.0);
+    }
+    else {
+      move(main_speed, -0.7);
+    }
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
     //while (digitalRead(sensorLeft) == 1) {}
@@ -405,7 +433,12 @@ void left_junction(){ // This function must go on as long as you are in the junc
 
 void right_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-    move(main_speed, 0.7);
+    if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11) {
+      move(main_speed, 1.0);
+    }
+    else {
+      move(main_speed, 0.7);
+    }
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
     //while (digitalRead(sensorRight) == 1) {} 
@@ -532,6 +565,10 @@ void color_detection() {
   tcs.getRawData(&r, &g, &b, &c);
   colorTemp = tcs.calculateColorTemperature(r, g, b);
   lux = tcs.calculateLux(r, g, b);
+  Serial.print("colour: (lux, temp) ");
+  Serial.print(lux);
+  Serial.print(", ");
+  Serial.println(colorTemp);
 
   if (lux > 4000) {
     Serial.println("red");
@@ -539,7 +576,7 @@ void color_detection() {
     current_graph_number = 0;
     digitalWrite(LED_Red, 1);
     delay(5000);
-  } else if (lux < 4000 && colorTemp > 10000) {
+  } else if (lux < 4000 && colorTemp > 10000) { // change to less than 4000?
     Serial.println("black");
     new_path(1);
     current_graph_number = 0;
@@ -593,7 +630,7 @@ int spike_in_distance(){
 }
 
 bool junction_detected(){
-  bool is_a_bay = (number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2);  // (and not the starting point)
+  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3));  // (and not the starting point)
   if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
   //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
 //    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
