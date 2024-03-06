@@ -45,11 +45,12 @@ unsigned long first_press_time = millis();
 const float signal_distance = 10.0;
 
 float dist_t, sensity_t; 
-float current_rot_frac = 0; 
 
 // map_names = [1,2,3,4,...20]
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
+
+const float distances_from_bays[20] = {28.5, 9, 28.5, 14, 14, 9, 18,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
@@ -164,7 +165,6 @@ bool junction_detected();
 
 int16_t current_speed = 0; 
 float current_rot_frac = 0; 
-
 
 
 void reset(){
@@ -594,7 +594,7 @@ int spike_in_distance(){
 
 bool junction_detected(){
   bool is_a_bay = (number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2);  // (and not the starting point)
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (is_a_bay && current_wall_distance < signal_distance) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
+  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
   //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
 //    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
     //if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[current_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
