@@ -371,6 +371,11 @@ void straight_junction(){ // This function must go on as long as you are in the 
       }
     }
     this_is_the_end = false;
+    for (int i = 0; i < 20; i ++) {
+        straight();
+        delay(25);
+      }
+    
   } else {  // Turn 180 degrees clockwise at a T-junction, i.e. stop turning after crossing second white line.
     move(main_speed, 1);
     for (int i = 0; i < 5; i++){
@@ -379,6 +384,11 @@ void straight_junction(){ // This function must go on as long as you are in the 
       }
     }
     this_is_the_end = false;
+    for (int i = 0; i < 20; i ++) {
+        straight();
+        delay(25);
+      }
+    
   }
   //Serial.println("Straight junction is done");
   delay(delay_time);
@@ -438,7 +448,7 @@ void left_junction(){ // This function must go on as long as you are in the junc
     //while (digitalRead(sensorLeft) == 1) {}
     move(main_speed, 0.7);
     delay(30);
-    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){ //Problematic bays, please wait before making any decisions
+    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions
       for (int i = 0; i < 20; i++) {
         straight();
         delay(25);
@@ -460,8 +470,9 @@ void right_junction(){ // This function must go on as long as you are in the jun
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
     //while (digitalRead(sensorRight) == 1) {} 
-
-    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){ //Problematic bays, please wait before making any decisions
+    move(main_speed, 0.7);
+    delay(30);
+    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions
       for (int i = 0; i < 20; i++) {
         straight();
         delay(25);
