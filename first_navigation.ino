@@ -10,7 +10,8 @@ Servo mech_servo;
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 #define ULTRASONIC_SAMPLE_PERIOD (10) // sample period in ms
 
-
+#define DEBUG true	// enables serial monitor output.
+#define DEBUG_SERIAL if(DEBUG)Serial
 
 int sensityPin = A0;  // ultrasonic input
 
@@ -332,9 +333,14 @@ void move(int16_t speed, float rotation_fraction) {
       v_right = speed;
       v_left = other_speed;
     }
-
+    
     myMotor1->setSpeed(abs(v_left)); 
     myMotor2->setSpeed(abs(v_right));
+
+    DEBUG_SERIAL.print("Changing speed to (left, right): ");
+    DEBUG_SERIAL.print(v_left);
+    DEBUG_SERIAL.print(" ");
+    DEBUG_SERIAL.println(v_right);
 
     if (mode != 0) {
       if (v_left > 0) {
@@ -359,12 +365,12 @@ void move(int16_t speed, float rotation_fraction) {
 void straight_junction(){ // This function must go on as long as you are in the junction
   bool sensor_sequence[] = {1,0,1,0,1};
   if (this_is_the_end == false){
-    Serial.println("Go straight in junction");
+    DEBUG_SERIAL.println("Go straight in junction");
     while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
       straight(); 
-      Serial.println("on it!");
+      //DEBUG_SERIAL.println("on it!");
     }
-    Serial.println("done?");
+    DEBUG_SERIAL.println("done?");
   } else if(current_path[current_graph_number] == 8) { // Turn 180 degrees anticlockwise at a T-junction, i.e. stop turning after crossing second white line.
     move(main_speed, -1);
     for (int i = 0; i < 5; i++){
@@ -392,46 +398,46 @@ void straight_junction(){ // This function must go on as long as you are in the 
       }
     
   }
-  //Serial.println("Straight junction is done");
+  //DEBUG_SERIAL.println("Straight junction is done");
   delay(delay_time);
 }
 
 void simple_mode_of_motion(){
   int y = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number+1]-1];
-  Serial.print("Current graph: ");
-  Serial.println(current_path[current_graph_number]);
-  Serial.print("Next graph: ");
-  Serial.println(current_path[current_graph_number + 1]);
-  Serial.print("Goal compass: ");
-  Serial.println(y);
-  Serial.print("Current compass: ");
-  Serial.println(current_compass);
+  DEBUG_SERIAL.print("Current graph: ");
+  DEBUG_SERIAL.println(current_path[current_graph_number]);
+  DEBUG_SERIAL.print("Next graph: ");
+  DEBUG_SERIAL.println(current_path[current_graph_number + 1]);
+  DEBUG_SERIAL.print("Goal compass: ");
+  DEBUG_SERIAL.println(y);
+  DEBUG_SERIAL.print("Current compass: ");
+  DEBUG_SERIAL.println(current_compass);
   if (current_path[current_graph_number] == 19 || current_path[current_graph_number] == 20){
-    Serial.println("Skip this junction");
+    DEBUG_SERIAL.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
-    Serial.print("Left junction is started... ");
+    DEBUG_SERIAL.print("Left junction is started... ");
     left_junction();
-    Serial.println("Left junction is done!!!");
+    DEBUG_SERIAL.println("Left junction is done!!!");
   } else if ((4 + y - current_compass) % 4 == 1) {// Turn right
-    Serial.print("Right junction is started... ");
+    DEBUG_SERIAL.print("Right junction is started... ");
     right_junction();
-    Serial.println("Right junction is done!!!");
+    DEBUG_SERIAL.println("Right junction is done!!!");
   } else if ((4 + y - current_compass ) % 4 == 0) { // Go straight
     straight_junction();
   } else { // Go backwards
     this_is_the_end = true;
     if ((current_path[current_graph_number] != 1 && current_path[current_graph_number] != 3)){
-      Serial.print("NOW WE GO BACKWARDS");
-      Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+      DEBUG_SERIAL.print("NOW WE GO BACKWARDS");
+      DEBUG_SERIAL.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
       stop_and_grab();
-      Serial.println("Picking up a block...");
+      DEBUG_SERIAL.println("Picking up a block...");
       color_detection();
-      Serial.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
-      Serial.print("NOW WE GO BACKWARDS");
+      DEBUG_SERIAL.println(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION);
+      DEBUG_SERIAL.print("NOW WE GO BACKWARDS");
     } else {
       stop_and_release();
       // stop and release
-      Serial.println("At the end, releasing block...");
+      DEBUG_SERIAL.println("At the end, releasing block...");
       } 
     }
 
@@ -527,7 +533,7 @@ void straight(){ // Regular function for going straightforward
 }
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
-  Serial.print("You have entered the left junction");
+  DEBUG_SERIAL.print("You have entered the left junction");
   while (digitalRead(sensorRight) == 1) { 
     move(main_speed, 1);
     delay(delay_time);
@@ -549,7 +555,7 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
 
 void backwards_right_junction(){ // Rotate anticlockwise until certain reusult. 
   
-  Serial.print("You have entered the right junction");
+  DEBUG_SERIAL.print("You have entered the right junction");
   while (digitalRead(sensorLeft) == 1) { 
     move(main_speed, -1);
     delay(delay_time);
@@ -571,16 +577,16 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 
 void stop_and_grab(){
   stop();
-  Serial.println("Car was stopped and now we are trying to grab the block");
+  DEBUG_SERIAL.println("Car was stopped and now we are trying to grab the block");
   for (int pos = 270; pos >=6; pos -= 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
-    // Serial.println("current pos: " + String(pos));
+    // DEBUG_SERIAL.println("current pos: " + String(pos));
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);
     //if(pos%10==0){
-    //  Serial.println("written mech done") ;}                      // waits 15 ms for the servo to reach the position
+    //  DEBUG_SERIAL.println("written mech done") ;}                      // waits 15 ms for the servo to reach the position
   }
-  Serial.println("Block was grabbed");
+  DEBUG_SERIAL.println("Block was grabbed");
 }
 
 void stop_and_release(){
@@ -603,37 +609,37 @@ void color_detection() {
   uint16_t r, g, b, c, colorTemp, lux;
   unsigned long start_time = millis();
 
-  while (millis() - start_time < 10000){
+  while (millis() - start_time < 5000){
 
     tcs.getRawData(&r, &g, &b, &c);
     colorTemp = tcs.calculateColorTemperature(r, g, b);
     lux = tcs.calculateLux(r, g, b);
-    Serial.print("colour: (lux, temp) ");
-    Serial.print(lux);
-    Serial.print(", ");
-    Serial.println(colorTemp);
+    DEBUG_SERIAL.print("colour: (lux, temp) ");
+    DEBUG_SERIAL.print(lux);
+    DEBUG_SERIAL.print(", ");
+    DEBUG_SERIAL.println(colorTemp);
 
     if (lux > 4000) {
-      Serial.println("red");
+      DEBUG_SERIAL.println("red");
       new_path(3);
       current_graph_number = 0;
       digitalWrite(LED_Red, 1);
       delay(5000);
       return;
     } else if (lux < 4000 && colorTemp > 10000) { // change to less than 4000?
-      Serial.println("black");
+      DEBUG_SERIAL.println("black");
       new_path(1);
       current_graph_number = 0;
       digitalWrite(LED_Green, 1);
       delay(5000);
       return;
     } else {
-      //Serial.println("no block");
+      //DEBUG_SERIAL.println("no block");
       // add wait 10 seconds then decide no block
       delay(100);
     }
   }
-  Serial.println("can't tell colour, guess black");
+  DEBUG_SERIAL.println("can't tell colour, guess black");
   new_path(1);
   current_graph_number = 0;
   digitalWrite(LED_Green, 1);
@@ -645,7 +651,7 @@ void color_detection() {
   move(main_speed, 1);
   while (digitalRead(sensorRight) == 1) {}
   while (digitalRead(sensorRight) == 0) {}
-  Serial.println("You have entered the line after the reverse junction");
+  DEBUG_SERIAL.println("You have entered the line after the reverse junction");
   while (digitalRead(sensorRight) == 1) {}
 } **/ // If you ever decide to turn by 180 degrees call this function
 
@@ -686,10 +692,10 @@ bool junction_detected(){
   if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
   //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
 //    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
-    //if (digitalRead(sensorFarRight)){Serial.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){Serial.println("FAR LEFT");} else if (number_of_connections[current_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){Serial.println("TOO CLOSE");} 
+    //if (digitalRead(sensorFarRight)){DEBUG_SERIAL.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){DEBUG_SERIAL.println("FAR LEFT");} else if (number_of_connections[current_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){DEBUG_SERIAL.println("TOO CLOSE");} 
     return true;
     //} else {
-    //  Serial.println("TOO EARLY");
+    //  DEBUG_SERIAL.println("TOO EARLY");
     //  return false;
   } else {
     return false; 
@@ -698,8 +704,8 @@ bool junction_detected(){
 
 
 void setup() {
-  Serial.begin(9600); // Start serial communication
-  Serial.println("Starting...");
+  DEBUG_SERIAL.begin(115200); // Start DEBUG_SERIAL communication
+  DEBUG_SERIAL.println("Starting...");
 
   // Set sensor pins as input
   pinMode(sensorFarLeft, INPUT);
@@ -718,10 +724,10 @@ void setup() {
 
   // Initialize the Motor Shield
   if (!AFMS.begin()) {
-    Serial.println("Motor Shield not found.");
+    DEBUG_SERIAL.println("Motor Shield not found.");
     while (1); // Halt if shield not found
   }
-  Serial.println("Motor Shield initialized.");
+  DEBUG_SERIAL.println("Motor Shield initialized.");
 
   // Button Interrupt:
   attachInterrupt(digitalPinToInterrupt(button), button_press_ISR, RISING);
@@ -758,7 +764,7 @@ void loop() {
       move(slow_speed, 0);
       //
       if (spike_in_distance() == -1){
-        Serial.println("Distance has suddenly decreased, correcting...");
+        DEBUG_SERIAL.println("Distance has suddenly decreased, correcting...");
         // distance has suddenly got smaller.
         // ultrasonic sensor on left side, so must be pointing slightly right, therefore correct by turning left (anticlockwise).
         move(slow_speed, 0.1);
@@ -768,7 +774,7 @@ void loop() {
           delay(ULTRASONIC_SAMPLE_PERIOD);
         }
         move(slow_speed, 0);
-        Serial.println("Now seeing the wall again.");
+        DEBUG_SERIAL.println("Now seeing the wall again.");
       }
 
     }
@@ -781,8 +787,8 @@ void loop() {
       time_of_last_junction_detected = millis();
       simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
       current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
-      //Serial.print("Compass was switched to " );
-      //Serial.println(current_compass);
+      //DEBUG_SERIAL.print("Compass was switched to " );
+      //DEBUG_SERIAL.println(current_compass);
       current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     } else {
       straight(); 
