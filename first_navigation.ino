@@ -10,7 +10,7 @@ Servo mech_servo;
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 #define ULTRASONIC_SAMPLE_PERIOD (10) // sample period in ms
 
-#define DEBUG true	// enables serial monitor output.
+#define DEBUG false	// enables serial monitor output.
 #define DEBUG_SERIAL if(DEBUG)Serial
 
 int sensityPin = A0;  // ultrasonic input
@@ -39,7 +39,7 @@ const uint8_t cube_color = 0;
 
 const uint8_t main_speed = 200;
 const uint8_t slow_speed = 130;
-const int delay_time = 25; // Time that will be delayed every single time
+const int delay_time = 5; // Time that will be delayed every single time
 
 uint8_t mode = 0;   // Mode state: 0=off, 1=forward, 2=backward
 unsigned long first_press_time = millis();
@@ -379,9 +379,9 @@ void straight_junction(){ // This function must go on as long as you are in the 
       }
     }
     this_is_the_end = false;
-    for (int i = 0; i < 20; i ++) {
+    for (int i = 0; i < 500/delay_time; i ++) {
         straight();
-        delay(25);
+        delay(delay_time);
       }
     
   } else {  // Turn 180 degrees clockwise at a T-junction, i.e. stop turning after crossing second white line.
@@ -392,9 +392,9 @@ void straight_junction(){ // This function must go on as long as you are in the 
       }
     }
     this_is_the_end = false;
-    for (int i = 0; i < 20; i ++) {
+    for (int i = 0; i < 500/delay_time; i ++) {
         straight();
-        delay(25);
+        delay(delay_time);
       }
     
   }
@@ -457,9 +457,9 @@ void left_junction(){ // This function must go on as long as you are in the junc
     move(main_speed, 0.7);
     delay(30);
     if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions //CHANGED
-      for (int i = 0; i < 20; i++) {
+      for (int i = 0; i < 500/delay_time; i++) {
         straight();
-        delay(25);
+        delay(delay_time);
       }
     }
     } else {
@@ -481,9 +481,9 @@ void right_junction(){ // This function must go on as long as you are in the jun
     move(main_speed, 0.7);
     delay(30);
     if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions
-      for (int i = 0; i < 20; i++) {
+      for (int i = 0; i < 500/delay_time; i++) {
         straight();
-        delay(25);
+        delay(delay_time);
       }
     }
 
@@ -504,7 +504,7 @@ void backwards(){
   } else if (!right && !left) { // Includes both going 
     move(-main_speed, 0);
   } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
-    for (int i = 0; i < 5; ++i) {
+    for (int i = 0; i < 125/delay_time; ++i) {
       move(-main_speed, 0);
       delay(delay_time);
     }
@@ -522,7 +522,7 @@ void straight(){ // Regular function for going straightforward
     } else if (!right && !left) { // Includes both going 
       move(main_speed, 0.0);
     } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
-      for (int i = 0; i < 5; ++i) {
+      for (int i = 0; i < 125/delay_time; ++i) {
         move(main_speed, 0);
         delay(delay_time);
       }
