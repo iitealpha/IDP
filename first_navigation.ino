@@ -132,7 +132,7 @@ unsigned long time_of_last_junction_detected;
 bool moving;  // True if moving, for flashing LED.
 uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
 //uint8_t current_path[] = {2,10,11,15,20,17,7,17}; 
-uint8_t bay_array[] = {4,5,6,7};//{7,6,4,5}; // Bays that we need to visit
+uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
 const uint8_t distance_history_length = 10;
@@ -439,7 +439,7 @@ void simple_mode_of_motion(){
 
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
-        if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11 || current_path[current_graph_number] == 12 || current_path[current_graph_number] == 15) {
+    if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11 || current_path[current_graph_number] == 12 || current_path[current_graph_number] == 15) {
       move(main_speed, -1.0);
     }
     else {
@@ -447,10 +447,10 @@ void left_junction(){ // This function must go on as long as you are in the junc
     }
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
-    //while (digitalRead(sensorLeft) == 1) {}
+    while (digitalRead(sensorLeft) == 1) {}
     move(main_speed, 0.7);
     delay(30);
-    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions
+    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions //CHANGED
       for (int i = 0; i < 20; i++) {
         straight();
         delay(25);
@@ -471,7 +471,7 @@ void right_junction(){ // This function must go on as long as you are in the jun
     }
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
-    //while (digitalRead(sensorRight) == 1) {} 
+    while (digitalRead(sensorRight) == 1) {} 
     move(main_speed, 0.7);
     delay(30);
     if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions
@@ -601,8 +601,9 @@ void stop_and_release(){
 void color_detection() {
   delay(500);
   uint16_t r, g, b, c, colorTemp, lux;
+  unsigned long start_time = millis();
 
-  while (true){
+  while (millis() - start_time < 10000){
 
     tcs.getRawData(&r, &g, &b, &c);
     colorTemp = tcs.calculateColorTemperature(r, g, b);
@@ -618,21 +619,26 @@ void color_detection() {
       current_graph_number = 0;
       digitalWrite(LED_Red, 1);
       delay(5000);
-      break;
+      return;
     } else if (lux < 4000 && colorTemp > 10000) { // change to less than 4000?
       Serial.println("black");
       new_path(1);
       current_graph_number = 0;
       digitalWrite(LED_Green, 1);
       delay(5000);
-      break;
+      return;
     } else {
       //Serial.println("no block");
       // add wait 10 seconds then decide no block
       delay(100);
     }
   }
-
+  Serial.println("can't tell colour, guess black");
+  new_path(1);
+  current_graph_number = 0;
+  digitalWrite(LED_Green, 1);
+  delay(5000);
+  
 }
 
 /**void reverse(){
