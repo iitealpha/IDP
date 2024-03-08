@@ -195,10 +195,11 @@ ISR(TCB0_INT_vect){
 void measure_distance(){
   // Take distaance reading:
   distance_history_pointer = (distance_history_pointer + 1) % distance_history_length;
-  distance_history[distance_history_pointer] = analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION;
+  distance_history[distance_history_pointer] = (analogRead(sensityPin) / ADC_SOLUTION) * MAX_RANG ;
   if (distance_history_datapoints < distance_history_length){
     distance_history_datapoints ++; // increase unless full
   }
+  Serial.println("distance: " + String(distance_history[distance_history_pointer]));
   // Clear interrupt flag
   //TCB1.INTFLAGS = TCB_CAPT_bm;
 }
@@ -615,7 +616,12 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 void stop_and_grab(){
   stop();
   DEBUG_SERIAL.println("Car was stopped and now we are trying to grab the block");
-  for (int pos = 270; pos >=6; pos -= 1) { // goes from 0 degrees to 180 degrees
+  int pos = 270;
+  for(pos;pos>=90;pos -= 44){
+    mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
+    delay(15);
+  }
+  for (pos; pos >=6; pos -= 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     // DEBUG_SERIAL.println("current pos: " + String(pos));
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
@@ -628,7 +634,7 @@ void stop_and_grab(){
 
 void stop_and_release(){
   stop();
-  for (int pos = 6; pos <= 270; pos += 1) { // goes from 0 degrees to 180 degrees
+  for (int pos = 6; pos <= 270; pos += 44) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);                       // waits 15 ms for the servo to reach the position
@@ -642,7 +648,7 @@ void stop_and_release(){
 
 
 void color_detection() {
-  delay(500);
+  //delay(500);
   uint16_t r, g, b, c, colorTemp, lux;
   unsigned long start_time = millis();
 
@@ -680,6 +686,7 @@ void color_detection() {
   new_path(1);
   current_graph_number = 0;
   digitalWrite(LED_Green, 1);
+  digitalWrite(LED_Red, 1);
   delay(5000);
   
 }
@@ -726,7 +733,7 @@ int spike_in_distance(){
 
 bool junction_detected(){
   bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3));  // (and not the starting point)
-  if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
+  if (((digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) && !is_a_bay)|| (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
   //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
 //    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
     //if (digitalRead(sensorFarRight)){DEBUG_SERIAL.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){DEBUG_SERIAL.println("FAR LEFT");} else if (number_of_connections[current_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){DEBUG_SERIAL.println("TOO CLOSE");} 
@@ -786,7 +793,6 @@ void setup() {
 
   current_compass = 1;
 }
-
 
 void loop() {
   bool farLeft = digitalRead(sensorFarLeft);
