@@ -32,14 +32,15 @@ const uint8_t LED_Red = 7;
 const uint8_t LED_Green = 8;
 const uint8_t LED_Blue = 9;
 const uint8_t servo_pin = 10;
+const uint8_t loop_speed_test_pin = 11;
 
 //cube color, 1 for red, 2 for black, 3 for nothing, 0 for error
 Adafruit_TCS34725 tcs = Adafruit_TCS34725(TCS34725_INTEGRATIONTIME_614MS, TCS34725_GAIN_1X);
 const uint8_t cube_color = 0;
 
-const uint8_t main_speed = 200;
+const uint8_t main_speed = 255;
 const uint8_t slow_speed = 130;
-const int delay_time = 5; // Time that will be delayed every single time
+const int delay_time = 1; // Time that will be delayed every single time
 
 uint8_t mode = 0;   // Mode state: 0=off, 1=forward, 2=backward
 unsigned long first_press_time = millis();
@@ -146,6 +147,11 @@ uint8_t distance_history_datapoints = 0; // increases until full
 // max deviation = fudge_factor * ((num_samples/2) * max_distance_per_sample (assuming constant speed))
 const float max_acceptable_deviation = 3 * (0.5 * distance_history_length * 20 * delay_time / 1000);
 float current_wall_distance = 0; // Use this for all distance measurements, updated only when value is acceptable.
+
+int16_t v_left_prev = 0;
+int16_t v_right_prev = 0;
+int8_t direction_left_prev = 0; // 1 is forwards, 2 is backwards, 0 is not yet defined.
+int8_t direction_right_prev = 0;
 
 
 
@@ -316,6 +322,8 @@ void move(int16_t speed, float rotation_fraction) {
   int16_t other_speed = 0;
   int16_t v_left = 0;
   int16_t v_right = 0;
+  int8_t direction_left = 0;  // 1 is forwards, 2 is backwards, 0 is not yet defined.
+  int8_t direction_right = 0;
   moving = true;
 
   if (speed != current_speed || current_rot_frac != rotation_fraction) {
@@ -333,26 +341,55 @@ void move(int16_t speed, float rotation_fraction) {
       v_right = speed;
       v_left = other_speed;
     }
-    
-    myMotor1->setSpeed(abs(v_left)); 
-    myMotor2->setSpeed(abs(v_right));
-
     DEBUG_SERIAL.print("Changing speed to (left, right): ");
-    DEBUG_SERIAL.print(v_left);
+    if (v_left != v_left_prev){
+      myMotor1->setSpeed(abs(v_left)); 
+      v_left_prev = v_left;
+      DEBUG_SERIAL.print(v_left);
+    }
     DEBUG_SERIAL.print(" ");
-    DEBUG_SERIAL.println(v_right);
+    if (v_right != v_right_prev){
+      myMotor2->setSpeed(abs(v_right));
+      v_right_prev = v_right;
+      DEBUG_SERIAL.print(v_right);
+    }
+    
+
+    
+    
+    
+
+    if (v_left > 0){
+      direction_left = 1;
+    } else{
+      direction_left = 2;
+    }
+    if (v_right > 0){
+      direction_right = 1;
+    } else{
+      direction_right = 2;
+    }
 
     if (mode != 0) {
-      if (v_left > 0) {
-        myMotor1->run(FORWARD);
-      } else {
-        myMotor1->run(BACKWARD);
+      if (direction_left != direction_left_prev){
+        DEBUG_SERIAL.print(".");
+        if (v_left > 0) {
+          myMotor1->run(FORWARD);
+        } else {
+          myMotor1->run(BACKWARD);
+        }
+        direction_left_prev = direction_left;
       }
-      if (v_right > 0) {
-        myMotor2->run(FORWARD);
-      } else {
-        myMotor2->run(BACKWARD);
+      if (direction_right != direction_right_prev){
+        DEBUG_SERIAL.print(".");
+        if (v_right > 0) {
+          myMotor2->run(FORWARD);
+        } else {
+          myMotor2->run(BACKWARD);
+        }
+        direction_right_prev = direction_right;
       }
+      DEBUG_SERIAL.println("");
     } else {
         stop();
     }
@@ -516,9 +553,9 @@ void straight(){ // Regular function for going straightforward
   bool left = digitalRead(sensorLeft);
   if (this_is_the_end == false) {
     if (right && !left) { //Move right
-      move(main_speed, 0.5);
+      move(main_speed, 0.35);
     } else if (!right && left) { //Move to the left
-      move(main_speed, -0.5);
+      move(main_speed, -0.35);
     } else if (!right && !left) { // Includes both going 
       move(main_speed, 0.0);
     } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
@@ -721,6 +758,8 @@ void setup() {
   digitalWrite(LED_Blue, 0);
   mech_servo.attach(servo_pin);
   mech_servo.write(270); // start vertically, angle is anticlockwise from just past the closed position.
+  pinMode(loop_speed_test_pin, OUTPUT);
+  digitalWrite(loop_speed_test_pin, 0);
 
   // Initialize the Motor Shield
   if (!AFMS.begin()) {
@@ -760,7 +799,7 @@ void loop() {
     current_wall_distance = distance_history[distance_history_pointer];
     // if entering a bay:
     // may need to add parking bay to this (current_path[current_graph_number] == 2)
-    if (false){//(current_path[current_graph_number] == 4 || current_path[current_graph_number] == 5 || current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){
+   /** if (false){//(current_path[current_graph_number] == 4 || current_path[current_graph_number] == 5 || current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){
       move(slow_speed, 0);
       //
       if (spike_in_distance() == -1){
@@ -777,11 +816,11 @@ void loop() {
         DEBUG_SERIAL.println("Now seeing the wall again.");
       }
 
-    }
-    else{
+    }**/
+    //else{
       // all other paths (not entering a bay)
-      move(main_speed, current_rot_frac);
-    }
+      straight();
+    //}
 
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       time_of_last_junction_detected = millis();
@@ -793,7 +832,9 @@ void loop() {
     } else {
       straight(); 
     }
+    digitalWrite(loop_speed_test_pin, 1);
     delay(delay_time); 
+    digitalWrite(loop_speed_test_pin, 0);
   } else {
     stop();
   }
