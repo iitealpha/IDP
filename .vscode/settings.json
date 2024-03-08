@@ -1,0 +1,26 @@
+{
+    "files.associations": {
+        "__bit_reference": "cpp",
+        "ios": "cpp",
+        "__hash_table": "cpp",
+        "__node_handle": "cpp",
+        "__split_buffer": "cpp",
+        "__verbose_abort": "cpp",
+        "algorithm": "cpp",
+        "array": "cpp",
+        "iterator": "cpp",
+        "memory_resource": "cpp",
+        "istream": "cpp",
+        "locale": "cpp",
+        "mutex": "cpp",
+        "optional": "cpp",
+        "ostream": "cpp",
+        "sstream": "cpp",
+        "string": "cpp",
+        "tuple": "cpp",
+        "unordered_map": "cpp",
+        "utility": "cpp",
+        "variant": "cpp",
+        "vector": "cpp"
+    }
+}
