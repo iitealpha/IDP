@@ -131,14 +131,14 @@ int paths_matrix[24][8]={ //List of paths from two pairs of nodes
 };
 
 uint8_t current_graph_number = 0; // we always start from second element of array. 
-uint8_t current_compass = 1; // In defolt situation starts from going to the North
+uint8_t current_compass = 1; // In default situation starts from going to the North
 uint8_t current_scenario = 1; // Starts from straight line
 bool this_is_the_end = false; // Becomes true when we reach final destination and need to reverse or go backwards
 bool part_two = false; // Becomes true when robot has completed first run
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
+uint8_t current_path[] = {2,10,9,4,9,0,0,0}; // Initial path
 //uint8_t current_path[] = {2,10,11,15,20,17,7,17}; 
 uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
@@ -199,7 +199,7 @@ ISR(TCB0_INT_vect){
 }
 
 void measure_distance(){
-  // Take distaance reading:
+  // Take distaance reading with ultrasonic sensor.
   distance_history_pointer = (distance_history_pointer + 1) % distance_history_length;
   distance_history[distance_history_pointer] = (analogRead(sensityPin) / ADC_SOLUTION) * MAX_RANG ;
   if (distance_history_datapoints < distance_history_length){
@@ -211,6 +211,7 @@ void measure_distance(){
 }
 
 void flash_led(){
+  // Flash LED if moving
   if (moving){
     if (digitalRead(LED_Blue)){
       digitalWrite(LED_Blue, 0);
@@ -225,6 +226,7 @@ void flash_led(){
 }
 
 void stop(){
+  // Stop the car by releasing both motors
   myMotor1->run(RELEASE);
   myMotor2->run(RELEASE);
   moving = false;
@@ -249,6 +251,7 @@ void button_press_ISR(){
 
 
 void new_path_define(int x){
+  // Update to a new path; Used when current path is completed by car.
 	for (int i = 0; i < 8; ++i) {
 	current_path[i]=paths_matrix[x][i];
 	}
@@ -257,6 +260,10 @@ void new_path_define(int x){
 void new_path(int big_goal_graph){
   int x = current_path[current_graph_number];
 	//Hard coding paths between nodes
+  // Update the path according to:
+  // 1. Next goal graph big_goal_graph
+  // 2. Current position x 
+  // bays in the first run, or previous goal graph in the second run, where cubes are not found
 	if (x==1){
 		if (big_goal_graph==4){
 			new_path_define(1);
@@ -266,8 +273,8 @@ void new_path(int big_goal_graph){
 			new_path_define(3);
 		}else if (big_goal_graph==7){
 			new_path_define(4);
-    		}else if (big_goal_graph==2){
-      			new_path_define(17);
+    }else if (big_goal_graph==2){
+      new_path_define(17);
 		}else{
 			new_path_define(0);
 		}}
@@ -280,8 +287,8 @@ void new_path(int big_goal_graph){
 			new_path_define(7);
 		}else if (big_goal_graph==7){
 			new_path_define(8);
-    		}else if (big_goal_graph==2){
-      			new_path_define(18);
+    }else if (big_goal_graph==2){
+      new_path_define(18);
 		}else{
 			new_path_define(0);
 		}}
@@ -455,6 +462,12 @@ void straight_junction(){ // This function must go on as long as you are in the 
 }
 
 void simple_mode_of_motion(){
+  // Determine the mode of motion to take using:
+  // 1. Current graph (junction that is to be reached by car)
+  // 2. Next graph (next junction to go once the current graph is reached)
+  // Current compass and next compass is used to determine where to turn
+
+  // Navigation debug system
   int y = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number+1]-1];
   DEBUG_SERIAL.print("Current graph: ");
   DEBUG_SERIAL.println(current_path[current_graph_number]);
@@ -464,6 +477,8 @@ void simple_mode_of_motion(){
   DEBUG_SERIAL.println(y);
   DEBUG_SERIAL.print("Current compass: ");
   DEBUG_SERIAL.println(current_compass);
+
+  // 
   if (current_path[current_graph_number] == 19 || current_path[current_graph_number] == 20){
     DEBUG_SERIAL.println("Skip this junction");
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
