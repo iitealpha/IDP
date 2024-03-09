@@ -78,7 +78,7 @@ const uint8_t better_map_of_directions[20][20] = { // First coordinate is curren
 {0,0,0,0,0,  4,0,0,0,0,     0,0,3,0,0,  1,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,3,0,0,0,  2,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,3,  0,4,0,0,0}};
-
+/**
 const int map_of_sizes[20][20] = { // First coordinate is current graph, second is goal graph, and result is distance between dots
 {0,0,0,0,0,  0,0,350,0,0,     0,0,0,0,0,  0,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,350,     0,0,0,0,0,  0,0,0,0,0},
@@ -102,8 +102,8 @@ const int map_of_sizes[20][20] = { // First coordinate is current graph, second 
 
 {0,0,0,0,0,  0,0,0,0,0,     0,640,0,0,0,  900,0,0,0,0},
 {0,0,0,0,0,  0,0,0,0,0,     0,0,0,0,640,  0,510,0,0,0}};
-
-int paths_matrix[19][8]={
+**/
+int paths_matrix[24][8]={ //List of paths from two pairs of nodes
   {0,0,0,0,0,0,0,0},
   {1,8,9,4,9,0,0,0},
   {1,8,12,13,14,5,14,0},
@@ -122,13 +122,19 @@ int paths_matrix[19][8]={
   {7,17,16,19,12,8,1,8},
   {7,17,20,15,11,3,11,0},
   {1,8,9,10,2,0,0,0},
-  {3,11,10,2,0,0,0,0}
+  {3,11,10,2,0,0,0,0},
+  {4,9,10,11,15,14,5,14},
+  {5,14,13,18,6,18,0,0},
+  {6,18,16,17,7,17,0,0},
+  {7,17,20,15,11,10,9,4}, // Might cause problems as [current_graph_number+1] undefined for final node
+  {2,10,9,4,9,0,0,0}
 };
 
 uint8_t current_graph_number = 0; // we always start from second element of array. 
 uint8_t current_compass = 1; // In defolt situation starts from going to the North
 uint8_t current_scenario = 1; // Starts from straight line
 bool this_is_the_end = false; // Becomes true when we reach final destination and need to reverse or go backwards
+bool part_two = false; // Becomes true when robot has completed first run
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
@@ -260,8 +266,8 @@ void new_path(int big_goal_graph){
 			new_path_define(3);
 		}else if (big_goal_graph==7){
 			new_path_define(4);
-    }else if (big_goal_graph==2){
-      new_path_define(17);
+    		}else if (big_goal_graph==2){
+      			new_path_define(17);
 		}else{
 			new_path_define(0);
 		}}
@@ -274,8 +280,8 @@ void new_path(int big_goal_graph){
 			new_path_define(7);
 		}else if (big_goal_graph==7){
 			new_path_define(8);
-    }else if (big_goal_graph==2){
-      new_path_define(18);
+    		}else if (big_goal_graph==2){
+      			new_path_define(18);
 		}else{
 			new_path_define(0);
 		}}
@@ -284,6 +290,8 @@ void new_path(int big_goal_graph){
 			new_path_define(9);
 		}else if (big_goal_graph==3){
 			new_path_define(10);
+		}else if (big_goal_graph==5){
+			new_path_define(19);
 		}else{
 			new_path_define(0);
 		}}
@@ -292,6 +300,8 @@ void new_path(int big_goal_graph){
 			new_path_define(11);
 		}else if (big_goal_graph==3){
 			new_path_define(12);
+		}else if (big_goal_graph==6){
+			new_path_define(20);
 		}else{
 			new_path_define(0);
 		}}
@@ -300,6 +310,8 @@ void new_path(int big_goal_graph){
 			new_path_define(13);
 		}else if (big_goal_graph==3){
 			new_path_define(14);
+		}else if (big_goal_graph==7){
+			new_path_define(21);
 		}else{
 			new_path_define(0);
 		}}
@@ -308,6 +320,8 @@ void new_path(int big_goal_graph){
 			new_path_define(15);
 		}else if (big_goal_graph==3){
 			new_path_define(16);
+		}else if (big_goal_graph==4){
+			new_path_define(22);
 		}else{
 			new_path_define(0);
 		}
@@ -652,7 +666,7 @@ void color_detection() {
   uint16_t r, g, b, c, colorTemp, lux;
   unsigned long start_time = millis();
 
-  while (millis() - start_time < 5000){
+  while (millis() - start_time < 3000){
 
     tcs.getRawData(&r, &g, &b, &c);
     colorTemp = tcs.calculateColorTemperature(r, g, b);
@@ -682,12 +696,17 @@ void color_detection() {
       delay(100);
     }
   }
-  DEBUG_SERIAL.println("can't tell colour, guess black");
-  new_path(1);
-  current_graph_number = 0;
-  digitalWrite(LED_Green, 1);
-  digitalWrite(LED_Red, 1);
-  delay(5000);
+  if (part_two){
+	stop_and_release();
+  }
+  else{
+  	DEBUG_SERIAL.println("can't tell colour, guess black");
+  	new_path(1);
+  	current_graph_number = 0;
+  	digitalWrite(LED_Green, 1);
+  	digitalWrite(LED_Red, 1);
+  	delay(5000);
+  }
   
 }
 
@@ -830,11 +849,22 @@ void loop() {
 
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       time_of_last_junction_detected = millis();
-      simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
-      current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
-      //DEBUG_SERIAL.print("Compass was switched to " );
-      //DEBUG_SERIAL.println(current_compass);
-      current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
+      if (current_path[current_graph_number]==2){
+	      delay(500);	//Keeps driving for 500ms
+	      stop();
+	      new_path_define(23);
+	      current_graph_number = 0;
+	      part_two = true;
+	      delay(5000);	//Stops for 5s
+	      simple_mode_of_motion();
+      }
+      else{
+	      simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
+        current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
+        //DEBUG_SERIAL.print("Compass was switched to " );
+        //DEBUG_SERIAL.println(current_compass);
+        current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
+	    }
     } else {
       straight(); 
     }
