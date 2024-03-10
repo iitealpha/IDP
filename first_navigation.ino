@@ -681,6 +681,8 @@ void stop_and_grab(){
     //if(pos%10==0){
     //  DEBUG_SERIAL.println("written mech done") ;}                      // waits 15 ms for the servo to reach the position
   }
+
+
   DEBUG_SERIAL.println("Block was grabbed");
 }
 
@@ -730,6 +732,7 @@ void color_detection() {
 
     // determining the color of cube grabbed; 
     // Take a path to corresponding bay;
+    // During the first round, if cube is not detected, release, go a bit further, grab again
     // During the second round, if cube is not detected, go to another bay
     if (lux > 4000) {
       DEBUG_SERIAL.println("red");
@@ -746,18 +749,28 @@ void color_detection() {
       delay(5000);
       return;
     } else {
-      //DEBUG_SERIAL.println("no block");
-      // add wait 10 seconds then decide no block
       delay(100);
     }
   }
+
 
   // go to another bay if nothing found (only in second round)
   if (part_two){
 	stop_and_release();
   }
+  else{
+    // manually release the block and go a bit further without using stop_and_release function
+    stop();
+    for (int pos = 6; pos <= 270; pos += 44) { // goes from 0 degrees to 180 degrees
+      // in steps of 1 degree
+      mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
+      delay(15);                       // waits 15 ms for the servo to reach the position
+    }
+    stop_and_grab();
+    color_detection();
+  }
 
-  
+
   else{
   	DEBUG_SERIAL.println("can't tell colour, guess black");
   	new_path(1);
