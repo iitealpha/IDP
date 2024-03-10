@@ -761,7 +761,7 @@ void color_detection() {
   else{
     // manually release the block and go a bit further without using stop_and_release function
     stop();
-    for (int pos = 6; pos <= 270; pos += 44) { // goes from 0 degrees to 180 degrees
+    for (int pos = 6; pos <= 180; pos += 20) { // goes from 0 degrees to 180 degrees
       // in steps of 1 degree
       mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
       delay(15);                       // waits 15 ms for the servo to reach the position
