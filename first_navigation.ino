@@ -728,7 +728,11 @@ void stop_and_release(){
   digitalWrite(LED_Green, 0);
 
   // Taking another new path by updating a new current bay number to take
-  current_bay_number = current_bay_number + 1;
+  if (current_path[current_graph_number]==7){
+	  current_bay_number=0;
+  }else{
+  	current_bay_number = current_bay_number + 1;
+  }
   new_path(bay_array[current_bay_number]);
   current_graph_number = 0;
 }
