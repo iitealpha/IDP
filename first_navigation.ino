@@ -10,7 +10,7 @@ Servo mech_servo;
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 #define ULTRASONIC_SAMPLE_PERIOD (10) // sample period in ms
 
-#define DEBUG true	// enables serial monitor output.
+#define DEBUG false	// enables serial monitor output.
 #define DEBUG_SERIAL if(DEBUG)Serial
 
 int sensityPin = A0;  // ultrasonic input
@@ -113,7 +113,7 @@ int paths_matrix[24][8]={ //List of paths from two pairs of nodes
   {3,11,15,14,5,14,0,0},
   {3,11,15,14,13,18,6,18},
   {3,11,15,20,17,7,17,0},
-  {4,9,8,1,8,0,0,0}, //9
+  {4,9,8,1,8,0,0,0},
   {4,9,10,11,3,11,0,0},
   {5,14,13,12,8,1,8,0},
   {5,14,15,11,3,11,0,0},
@@ -123,7 +123,7 @@ int paths_matrix[24][8]={ //List of paths from two pairs of nodes
   {7,17,20,15,11,3,11,0},
   {1,8,9,10,2,0,0,0},
   {3,11,10,2,0,0,0,0},
-  {4,9,10,11,15,14,5,14}, //19
+  {4,9,10,11,15,14,5,14},
   {5,14,13,18,6,18,0,0},
   {6,18,16,17,7,17,0,0},
   {7,17,20,15,11,10,9,4}, // Might cause problems as [current_graph_number+1] undefined for final node
@@ -139,7 +139,8 @@ unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
 uint8_t current_path[] = {2,10,9,4,9,0,0,0}; // Initial path
-uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
+//uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
+uint8_t bay_array[] = {4,2};//{7,6,4,5}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
 const uint8_t distance_history_length = 10;
@@ -204,7 +205,7 @@ void measure_distance(){
   if (distance_history_datapoints < distance_history_length){
     distance_history_datapoints ++; // increase unless full
   }
-  // Serial.println("distance: " + String(distance_history[distance_history_pointer]));
+  Serial.println("distance: " + String(distance_history[distance_history_pointer]));
   // Clear interrupt flag
   //TCB1.INTFLAGS = TCB_CAPT_bm;
 }
@@ -426,11 +427,8 @@ void last_bay(){
   delay(5000);	//Stops for 5s
   this_is_the_end = true; 
   current_compass = 1; //change compass by 180 degrees or from 3 to 1
-  backwards();
-  delay(1000);
   new_path_define(23);
   current_graph_number = 0;
-  current_bay_number=0;
   part_two = true;
   
 }
@@ -632,18 +630,19 @@ void straight(){ // Regular function for going straightforward
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
   DEBUG_SERIAL.print("You have entered the left junction");
-
+  float x = 1;
+  if (current_path[current_graph_number == 17]) {
+    x = 0.7;
+  }
   // another way of implementing turning while detecting if the turning process is completed.
   while (digitalRead(sensorRight) == 1) { 
-    move(main_speed, 1);
+    move(main_speed, x);
     delay(delay_time);
   }
   while (digitalRead(sensorRight) == 0) {
-    move(main_speed, 1);
     delay(delay_time);
   }
   while (digitalRead(sensorRight) == 1) {
-    move(main_speed, 1);
     delay(delay_time);
   }
 
@@ -656,19 +655,21 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
 }
 
 void backwards_right_junction(){ // Rotate anticlockwise until certain reusult. 
-  
+  float x = -1;
+  if (current_path[current_graph_number == 17]) {
+    x = -0.7;
+  }
+
   DEBUG_SERIAL.print("You have entered the right junction");
   // another way of implementing turning while detecting if the turning process is completed.
   while (digitalRead(sensorLeft) == 1) { 
-    move(main_speed, -1);
+    move(main_speed, x);
     delay(delay_time);
   }
   while (digitalRead(sensorLeft) == 0) {
-    move(main_speed, -1);
     delay(delay_time);
   }
   while (digitalRead(sensorLeft) == 1) {
-    move(main_speed, -1);
     delay(delay_time);
   }
   // Tell the robot: you don't need to take backward action until another end is met
@@ -707,7 +708,6 @@ void stop_and_grab(){
   DEBUG_SERIAL.println("Block was grabbed");
 }
 
-
 void stop_and_release(){
   // actions to take:
   // 1. stop the car from moving
@@ -735,7 +735,7 @@ void stop_and_release(){
 
 
 void color_detection() {
-  delay(500);
+  //delay(500);
   uint16_t r, g, b, c, colorTemp, lux;
   unsigned long start_time = millis();
 
@@ -777,7 +777,7 @@ void color_detection() {
   	new_path(1);
   	current_graph_number = 0;
   	digitalWrite(LED_Green, 1);
-  	//digitalWrite(LED_Red, 1);
+  	digitalWrite(LED_Red, 1);
   	delay(5000);
   }
   
@@ -897,11 +897,6 @@ void loop() {
     current_wall_distance = distance_history[distance_history_pointer];
     straight();
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
-      Serial.println(current_path[current_graph_number]);
-      for (int i = 0; i < 8; i ++) {
-        Serial.print(current_path[i]);
-        Serial.print("; ");
-      }
       time_of_last_junction_detected = millis();
       simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
       current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
