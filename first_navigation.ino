@@ -10,7 +10,7 @@ Servo mech_servo;
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 #define ULTRASONIC_SAMPLE_PERIOD (10) // sample period in ms
 
-#define DEBUG true	// enables serial monitor output.
+#define DEBUG false	// enables serial monitor output.
 #define DEBUG_SERIAL if(DEBUG)Serial
 
 int sensityPin = A0;  // ultrasonic input
@@ -131,16 +131,16 @@ int paths_matrix[24][8]={ //List of paths from two pairs of nodes
 };
 
 uint8_t current_graph_number = 0; // we always start from second element of array. 
-uint8_t current_compass = 1; // In defolt situation starts from going to the North
+uint8_t current_compass = 1; // In default situation starts from going to the North
 uint8_t current_scenario = 1; // Starts from straight line
 bool this_is_the_end = false; // Becomes true when we reach final destination and need to reverse or go backwards
 bool part_two = false; // Becomes true when robot has completed first run
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-uint8_t current_path[] = {2,10,9,4,9,0,0,0}; 
-//uint8_t current_path[] = {2,10,11,15,20,17,7,17}; 
-uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
+uint8_t current_path[] = {2,10,9,4,9,0,0,0}; // Initial path
+//uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
+uint8_t bay_array[] = {4,2};//{7,6,4,5}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
 const uint8_t distance_history_length = 10;
@@ -199,18 +199,19 @@ ISR(TCB0_INT_vect){
 }
 
 void measure_distance(){
-  // Take distaance reading:
+  // Take distaance reading with ultrasonic sensor.
   distance_history_pointer = (distance_history_pointer + 1) % distance_history_length;
   distance_history[distance_history_pointer] = (analogRead(sensityPin) / ADC_SOLUTION) * MAX_RANG ;
   if (distance_history_datapoints < distance_history_length){
     distance_history_datapoints ++; // increase unless full
   }
-  //Serial.println("distance: " + String(distance_history[distance_history_pointer]));
+  Serial.println("distance: " + String(distance_history[distance_history_pointer]));
   // Clear interrupt flag
   //TCB1.INTFLAGS = TCB_CAPT_bm;
 }
 
 void flash_led(){
+  // Flash LED if moving
   if (moving){
     if (digitalRead(LED_Blue)){
       digitalWrite(LED_Blue, 0);
@@ -225,6 +226,7 @@ void flash_led(){
 }
 
 void stop(){
+  // Stop the car by releasing both motors
   myMotor1->run(RELEASE);
   myMotor2->run(RELEASE);
   moving = false;
@@ -249,6 +251,7 @@ void button_press_ISR(){
 
 
 void new_path_define(int x){
+  // Update to a new path; Used when current path is completed by car.
 	for (int i = 0; i < 8; ++i) {
 	current_path[i]=paths_matrix[x][i];
 	}
@@ -257,6 +260,10 @@ void new_path_define(int x){
 void new_path(int big_goal_graph){
   int x = current_path[current_graph_number];
 	//Hard coding paths between nodes
+  // Update the path according to:
+  // 1. Next goal graph big_goal_graph
+  // 2. Current position x 
+  // bays in the first run, or previous goal graph in the second run, where cubes are not found
 	if (x==1){
 		if (big_goal_graph==4){
 			new_path_define(1);
@@ -266,8 +273,8 @@ void new_path(int big_goal_graph){
 			new_path_define(3);
 		}else if (big_goal_graph==7){
 			new_path_define(4);
-    		}else if (big_goal_graph==2){
-      			new_path_define(17);
+    }else if (big_goal_graph==2){
+      new_path_define(17);
 		}else{
 			new_path_define(0);
 		}}
@@ -280,8 +287,8 @@ void new_path(int big_goal_graph){
 			new_path_define(7);
 		}else if (big_goal_graph==7){
 			new_path_define(8);
-    		}else if (big_goal_graph==2){
-      			new_path_define(18);
+    }else if (big_goal_graph==2){
+      new_path_define(18);
 		}else{
 			new_path_define(0);
 		}}
@@ -413,6 +420,18 @@ void move(int16_t speed, float rotation_fraction) {
   }
 }
 
+void last_bay(){
+  straight_junction(); // Ends when white line is over
+  delay(500);	//Keeps driving for 500ms
+  stop();
+  delay(5000);	//Stops for 5s
+  this_is_the_end = true; 
+  current_compass = 1; //change compass by 180 degrees or from 3 to 1
+  new_path_define(23);
+  current_graph_number = 0;
+  part_two = true;
+  
+}
 
 void straight_junction(){ // This function must go on as long as you are in the junction
   bool sensor_sequence[] = {1,0,1,0,1};
@@ -437,17 +456,22 @@ void straight_junction(){ // This function must go on as long as you are in the 
       }
     
   } else {  // Turn 180 degrees clockwise at a T-junction, i.e. stop turning after crossing second white line.
-    move(main_speed, 1);
-    for (int i = 0; i < 5; i++){
-      while (digitalRead(sensorRight) == sensor_sequence[i]) {
-        delay(10); // delay in case of "bounce" in line sensor readings.
+    if (current_path[current_graph_number] == 2) {
+      delay(500);
+    } else {
+      move(main_speed, 1);
+      for (int i = 0; i < 5; i++){
+        while (digitalRead(sensorRight) == sensor_sequence[i]) {
+          delay(10); // delay in case of "bounce" in line sensor readings.
+        }
       }
+      this_is_the_end = false;
+      for (int i = 0; i < 500/delay_time; i ++) {
+          straight();
+          delay(delay_time);
+        }
     }
-    this_is_the_end = false;
-    for (int i = 0; i < 500/delay_time; i ++) {
-        straight();
-        delay(delay_time);
-      }
+
     
   }
   //DEBUG_SERIAL.println("Straight junction is done");
@@ -455,6 +479,12 @@ void straight_junction(){ // This function must go on as long as you are in the 
 }
 
 void simple_mode_of_motion(){
+  // Determine the mode of motion to take using:
+  // 1. Current graph (junction that is to be reached by car)
+  // 2. Next graph (next junction to go once the current graph is reached)
+  // Current compass and next compass is used to determine where to turn
+
+  // Navigation debug system
   int y = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number+1]-1];
   DEBUG_SERIAL.print("Current graph: ");
   DEBUG_SERIAL.println(current_path[current_graph_number]);
@@ -464,8 +494,12 @@ void simple_mode_of_motion(){
   DEBUG_SERIAL.println(y);
   DEBUG_SERIAL.print("Current compass: ");
   DEBUG_SERIAL.println(current_compass);
+
+  // Junction actions to take according to different conditions
   if (current_path[current_graph_number] == 19 || current_path[current_graph_number] == 20){
     DEBUG_SERIAL.println("Skip this junction");
+  } else if (current_path[current_graph_number] == 2 && current_compass == 3) {
+    last_bay();
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
     DEBUG_SERIAL.print("Left junction is started... ");
     left_junction();
@@ -498,16 +532,24 @@ void simple_mode_of_motion(){
 void left_junction(){ // This function must go on as long as you are in the junction
   if (this_is_the_end == false) {
     if (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11 || current_path[current_graph_number] == 12 || current_path[current_graph_number] == 15) {
-      move(main_speed, -1.0);
+      move(main_speed, -1.0); // Rotation fraction can be changed according to actual performance
     }
     else {
       move(main_speed, -0.7);
     }
+
+    // process of turning determination; involves Left sensor detects whether it has been crossing the destination line of turning left
     while (digitalRead(sensorLeft) == 1) {}
     while (digitalRead(sensorLeft) == 0) {} // While right sensor is outside of its first line, move it to the line
     while (digitalRead(sensorLeft) == 1) {}
-    move(main_speed, 0.7);
-    delay(30);
+
+    //Extra Delay added for the car to deal with overshoot problem
+    move(main_speed, 0.7); // Rotation fraction can be changed according to actual performance
+    delay(30); // delay time can also be changed
+
+    
+    // to cope with the problem of detecting two extra junctions previously;
+    // probably not needed anymore
     if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions //CHANGED
       for (int i = 0; i < 500/delay_time; i++) {
         straight();
@@ -527,6 +569,8 @@ void right_junction(){ // This function must go on as long as you are in the jun
     else {
       move(main_speed, 0.7);
     }
+
+    // process of turning determination; involves Right sensor detects whether it has been crossing the destination line when turning right
     while (digitalRead(sensorRight) == 1) {}
     while (digitalRead(sensorRight) == 0) {}
     while (digitalRead(sensorRight) == 1) {} 
@@ -586,6 +630,8 @@ void straight(){ // Regular function for going straightforward
 
 void backwards_left_junction(){ // Rotate clokwise until certain results
   DEBUG_SERIAL.print("You have entered the left junction");
+
+  // another way of implementing turning while detecting if the turning process is completed.
   while (digitalRead(sensorRight) == 1) { 
     move(main_speed, 1);
     delay(delay_time);
@@ -598,6 +644,8 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
     move(main_speed, 1);
     delay(delay_time);
   }
+
+  // Tell the robot: you don't need to take backward action until another end is met
   this_is_the_end = false;
     time_of_last_junction_detected = millis();
   while (millis() - time_of_last_junction_detected < 1000) {
@@ -608,6 +656,7 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
 void backwards_right_junction(){ // Rotate anticlockwise until certain reusult. 
   
   DEBUG_SERIAL.print("You have entered the right junction");
+  // another way of implementing turning while detecting if the turning process is completed.
   while (digitalRead(sensorLeft) == 1) { 
     move(main_speed, -1);
     delay(delay_time);
@@ -620,6 +669,7 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
     move(main_speed, -1);
     delay(delay_time);
   }
+  // Tell the robot: you don't need to take backward action until another end is met
   this_is_the_end = false;
   time_of_last_junction_detected = millis();
   while (millis() - time_of_last_junction_detected < 1000) {
@@ -628,13 +678,20 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
 }
 
 void stop_and_grab(){
+  // actions to take:
+  // 1. stop the car from moving
+  // 2. tell servo to grab the block
   stop();
   DEBUG_SERIAL.println("Car was stopped and now we are trying to grab the block");
+
+  // Fast movement of grabbing hand at first before actual grabbing, which saves time
   int pos = 270;
   for(pos;pos>=90;pos -= 44){
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);
   }
+
+  // slow the servo down to grab the block to make grabbing process not screwed up by hurrying
   for (pos; pos >=6; pos -= 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     // DEBUG_SERIAL.println("current pos: " + String(pos));
@@ -643,18 +700,31 @@ void stop_and_grab(){
     //if(pos%10==0){
     //  DEBUG_SERIAL.println("written mech done") ;}                      // waits 15 ms for the servo to reach the position
   }
+
+
   DEBUG_SERIAL.println("Block was grabbed");
 }
 
 void stop_and_release(){
+  // actions to take:
+  // 1. stop the car from moving
+  // 2. tell servo to release the block
   stop();
+
+  // fast release. The position value is renewed fastly, but the servo isn't that fast in real testing
+  // the servo then tried the match the position AFTER the pos value is renewed to 270
+  // this suprisingly works well when releasing as it saves time by taking most of hand's position reset motion to backwarding process; no need to extra coding in backward motion
   for (int pos = 6; pos <= 270; pos += 44) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);                       // waits 15 ms for the servo to reach the position
   }
+
+  // The LED color indicator is dimmed
   digitalWrite(LED_Red, 0);
   digitalWrite(LED_Green, 0);
+
+  // Taking another new path by updating a new current bay number to take
   current_bay_number = current_bay_number + 1;
   new_path(bay_array[current_bay_number]);
   current_graph_number = 0;
@@ -822,51 +892,14 @@ void loop() {
   if (mode != 0) {  
     measure_distance();
     current_wall_distance = distance_history[distance_history_pointer];
-    // if entering a bay:
-    // may need to add parking bay to this (current_path[current_graph_number] == 2)
-   /** if (false){//(current_path[current_graph_number] == 4 || current_path[current_graph_number] == 5 || current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7){
-      move(slow_speed, 0);
-      //
-      if (spike_in_distance() == -1){
-        DEBUG_SERIAL.println("Distance has suddenly decreased, correcting...");
-        // distance has suddenly got smaller.
-        // ultrasonic sensor on left side, so must be pointing slightly right, therefore correct by turning left (anticlockwise).
-        move(slow_speed, 0.1);
-        delay(delay_time);
-        while(spike_in_distance != 1){
-          // keep correcting until distance gets larger again.
-          delay(ULTRASONIC_SAMPLE_PERIOD);
-        }
-        move(slow_speed, 0);
-        DEBUG_SERIAL.println("Now seeing the wall again.");
-      }
-
-    }**/
-    //else{
-      // all other paths (not entering a bay)
-      straight();
-    //}
-
+    straight();
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       time_of_last_junction_detected = millis();
-      if (current_path[current_graph_number]==2 && current_compass == 3){
-	      delay(500);	//Keeps driving for 500ms
-	      stop();
-	      new_path_define(23);
-	      current_graph_number = 0;
-	      part_two = true;
-	      delay(5000);	//Stops for 5s
-	      simple_mode_of_motion();
-      }
-      else{
-	      simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
-        current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
-        //DEBUG_SERIAL.print("Compass was switched to " );
-        //DEBUG_SERIAL.println(current_compass);
-        current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
-	    }
-    } else {
-      straight(); 
+      simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
+      current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
+      //DEBUG_SERIAL.print("Compass was switched to " );
+      //DEBUG_SERIAL.println(current_compass);
+      current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     }
     digitalWrite(loop_speed_test_pin, 1);
     delay(delay_time); 
