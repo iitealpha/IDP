@@ -52,7 +52,7 @@ float dist_t, sensity_t;
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const float distances_from_bays[20] = {24.5, 12.0, 24.5, 10.0, 10.0, 5.0, 10.0, 0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
+const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 7, 10, 0,0,0,0,0,0,0,0, 10.0 ,0,0,0,0}; // Put as a coordinate graph number - 1
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
@@ -139,7 +139,7 @@ unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
 uint8_t current_path[] = {2,10,9,4,9,0,0,0}; // Initial path
-uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
+uint8_t bay_array[] = {4,5,6,7,2}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
 const uint8_t distance_history_length = 10;
@@ -362,17 +362,20 @@ void move(int16_t speed, float rotation_fraction) {
       v_right = speed;
       v_left = other_speed;
     }
-    DEBUG_SERIAL.print("Changing speed to (left, right): ");
+    DEBUG_SERIAL.print("Speed is: ");
+    DEBUG_SERIAL.println(speed);
+    DEBUG_SERIAL.print("Rotation fraction is: ");
+    DEBUG_SERIAL.println(rotation_fraction);
     if (v_left != v_left_prev){
       myMotor1->setSpeed(abs(v_left)); 
       v_left_prev = v_left;
-      DEBUG_SERIAL.print(v_left);
+      //DEBUG_SERIAL.print(v_left);
     }
     DEBUG_SERIAL.print(" ");
     if (v_right != v_right_prev){
       myMotor2->setSpeed(abs(v_right));
       v_right_prev = v_right;
-      DEBUG_SERIAL.print(v_right);
+      //DEBUG_SERIAL.print(v_right);
     }
     
 
@@ -421,18 +424,13 @@ void move(int16_t speed, float rotation_fraction) {
 
 void last_bay(){
   straight_junction(); // Ends when white line is over
-  //delay(500);	//Keeps driving for 500ms
-  measure_distance();
-  while (distance_history[distance_history_pointer] > distances_from_bays[1]){
-    delay(delay_time);
-    measure_distance();
-  }
+  delay(500);	//Keeps driving for 500ms
   stop();
   delay(5000);	//Stops for 5s
   this_is_the_end = true; 
   current_compass = 1; //change compass by 180 degrees or from 3 to 1
-  backwards();
-  delay(1500);
+  move(-main_speed, 0.0);
+  delay(1000);
   new_path_define(23);
   current_graph_number = 0;
   current_bay_number=0;
@@ -615,18 +613,22 @@ void backwards(){
 }
 
 void straight(){ // Regular function for going straightforward
+  uint8_t sp = main_speed; 
+  if (number_of_connections[current_path[current_graph_number]-1] == 1 && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3)) {
+    sp = 200;
+  }
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);
   if (this_is_the_end == false) {
     if (right && !left) { //Move right
-      move(main_speed, 0.35);
+      move(sp, 0.35);
     } else if (!right && left) { //Move to the left
-      move(main_speed, -0.35);
+      move(sp, -0.35);
     } else if (!right && !left) { // Includes both going 
-      move(main_speed, 0.0);
+      move(sp, 0.0);
     } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
       for (int i = 0; i < 125/delay_time; ++i) {
-        move(main_speed, 0);
+        move(sp, 0);
         delay(delay_time);
       }
     }
@@ -638,17 +640,22 @@ void straight(){ // Regular function for going straightforward
 void backwards_left_junction(){ // Rotate clokwise until certain results
   DEBUG_SERIAL.print("You have entered the left junction");
 
+  float rot = 1.0; 
+  if (current_path[current_graph_number] == 17 && current_compass == 1 || current_path[current_graph_number] == 14 && current_compass == 1) {
+    rot = 0.75;
+  }
+
   // another way of implementing turning while detecting if the turning process is completed.
   while (digitalRead(sensorRight) == 1) { 
-    move(main_speed, 1);
+    move(main_speed, rot);
     delay(delay_time);
   }
   while (digitalRead(sensorRight) == 0) {
-    move(main_speed, 1);
+    move(main_speed, rot);
     delay(delay_time);
   }
   while (digitalRead(sensorRight) == 1) {
-    move(main_speed, 1);
+    move(main_speed, rot);
     delay(delay_time);
   }
 
@@ -662,18 +669,23 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
 
 void backwards_right_junction(){ // Rotate anticlockwise until certain reusult. 
   
+  float rot = -1.0; 
+  if (current_path[current_graph_number] == 17 && current_compass == 1 || current_path[current_graph_number] == 14 && current_compass == 1) {
+    rot = -0.75;
+  }
+
   DEBUG_SERIAL.print("You have entered the right junction");
   // another way of implementing turning while detecting if the turning process is completed.
   while (digitalRead(sensorLeft) == 1) { 
-    move(main_speed, -1);
+    move(main_speed, rot);
     delay(delay_time);
   }
   while (digitalRead(sensorLeft) == 0) {
-    move(main_speed, -1);
+    move(main_speed, rot);
     delay(delay_time);
   }
   while (digitalRead(sensorLeft) == 1) {
-    move(main_speed, -1);
+    move(main_speed, rot);
     delay(delay_time);
   }
   // Tell the robot: you don't need to take backward action until another end is met
@@ -693,10 +705,13 @@ void stop_and_grab(){
 
   // Fast movement of grabbing hand at first before actual grabbing, which saves time
   int pos = 270;
-  for(pos;pos>=90;pos -= 44){
+
+  // fast grab 
+  for(pos;pos>=90;pos -= 22){
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(15);
+    delay(30);
   }
+  
 
   // slow the servo down to grab the block to make grabbing process not screwed up by hurrying
   for (pos; pos >=6; pos -= 1) { // goes from 0 degrees to 180 degrees
@@ -733,14 +748,18 @@ void stop_and_release(){
   digitalWrite(LED_Green, 0);
 
   // Taking another new path by updating a new current bay number to take
-  current_bay_number = current_bay_number + 1;
+  if (current_path[current_graph_number]==7){
+	  current_bay_number=0;
+  }else{
+  	current_bay_number = current_bay_number + 1;
+  }
   new_path(bay_array[current_bay_number]);
   current_graph_number = 0;
 }
 
 
 void color_detection() {
-  delay(500);
+  delay(800);
   uint16_t r, g, b, c, colorTemp, lux;
   unsigned long start_time = millis();
 
@@ -829,15 +848,9 @@ int spike_in_distance(){
 }
 
 bool junction_detected(){
-  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3));  // (and not the starting point)
+  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3) || (current_path[current_graph_number] == 17 && current_compass == 1) || (current_path[current_graph_number] == 14 && current_compass == 1));  // (and not the starting point)
   if (((digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) && !is_a_bay)|| (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
-  //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
-//    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
-    //if (digitalRead(sensorFarRight)){DEBUG_SERIAL.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){DEBUG_SERIAL.println("FAR LEFT");} else if (number_of_connections[current_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){DEBUG_SERIAL.println("TOO CLOSE");} 
     return true;
-    //} else {
-    //  DEBUG_SERIAL.println("TOO EARLY");
-    //  return false;
   } else {
     return false; 
   }
@@ -915,7 +928,7 @@ void loop() {
       current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     }
     digitalWrite(loop_speed_test_pin, 1);
-    delay(delay_time); 
+    delay(2*delay_time); 
     digitalWrite(loop_speed_test_pin, 0);
   } else {
     stop();
