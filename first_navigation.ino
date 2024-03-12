@@ -612,7 +612,7 @@ void backwards(){
 void straight(){ // Regular function for going straightforward
   uint8_t sp = main_speed; 
   if (number_of_connections[current_path[current_graph_number]-1] == 1) {
-    sp = main_speed / 2;
+    sp = 100;
   }
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);
