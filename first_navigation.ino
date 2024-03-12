@@ -139,7 +139,7 @@ unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
 uint8_t current_path[] = {2,10,9,4,9,0,0,0}; // Initial path
-uint8_t bay_array[] = {4,2};//{7,6,4,5}; // Bays that we need to visit
+uint8_t bay_array[] = {4,5,6,7,2};//{7,6,4,5}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
 const uint8_t distance_history_length = 10;
@@ -432,7 +432,7 @@ void last_bay(){
   this_is_the_end = true; 
   current_compass = 1; //change compass by 180 degrees or from 3 to 1
   backwards();
-  delay(1000);
+  delay(1500);
   new_path_define(23);
   current_graph_number = 0;
   current_bay_number=0;
@@ -866,7 +866,7 @@ void setup() {
   digitalWrite(loop_speed_test_pin, 0);
 
   // Initialize the Motor Shield
-  if (!AFMS.begin()) {
+  if (!AFMS.begin(1000)) {
     DEBUG_SERIAL.println("Motor Shield not found.");
     while (1); // Halt if shield not found
   }
