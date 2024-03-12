@@ -705,12 +705,6 @@ void stop_and_grab(){
 
   // Fast movement of grabbing hand at first before actual grabbing, which saves time
   int pos = 270;
-
-  // fast grab 
-  for(pos;pos>=90;pos -= 22){
-    mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(30);
-  }
   
 
   // slow the servo down to grab the block to make grabbing process not screwed up by hurrying
@@ -848,8 +842,8 @@ int spike_in_distance(){
 }
 
 bool junction_detected(){
-  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3) || (current_path[current_graph_number] == 17 && current_compass == 1) || (current_path[current_graph_number] == 14 && current_compass == 1));  // (and not the starting point)
-  if (((digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) && !is_a_bay)|| (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
+  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3) || (current_path[current_graph_number] == 16 && current_compass == 1));  // (and not the starting point)
+  if (((digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)))|| (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
     return true;
   } else {
     return false; 
@@ -928,7 +922,7 @@ void loop() {
       current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     }
     digitalWrite(loop_speed_test_pin, 1);
-    delay(2*delay_time); 
+    delay(delay_time); 
     digitalWrite(loop_speed_test_pin, 0);
   } else {
     stop();
