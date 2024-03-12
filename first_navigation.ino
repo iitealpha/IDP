@@ -10,7 +10,7 @@ Servo mech_servo;
 #define ADC_SOLUTION (1023.0)  //ADC accuracy of Arduino UNO is 10bit 
 #define ULTRASONIC_SAMPLE_PERIOD (10) // sample period in ms
 
-#define DEBUG false	// enables serial monitor output.
+#define DEBUG true	// enables serial monitor output.
 #define DEBUG_SERIAL if(DEBUG)Serial
 
 int sensityPin = A0;  // ultrasonic input
