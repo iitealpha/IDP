@@ -52,7 +52,7 @@ float dist_t, sensity_t;
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 5, 10,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
+const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 5, 10,0,0,0,0,0,0,0,0, 4.0 ,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
@@ -608,18 +608,22 @@ void backwards(){
 }
 
 void straight(){ // Regular function for going straightforward
+  uint8_t sp = main_speed; 
+  if (number_of_connections[current_path[current_graph_number]-1] == 1) {
+    sp = main_speed / 2;
+  }
   bool right = digitalRead(sensorRight);
   bool left = digitalRead(sensorLeft);
   if (this_is_the_end == false) {
     if (right && !left) { //Move right
-      move(main_speed, 0.35);
+      move(sp, 0.35);
     } else if (!right && left) { //Move to the left
-      move(main_speed, -0.35);
+      move(sp, -0.35);
     } else if (!right && !left) { // Includes both going 
-      move(main_speed, 0.0);
+      move(sp, 0.0);
     } else { // Both are white, so we need time delay and going straightforward for short period of time ignoring all sensors. 
       for (int i = 0; i < 125/delay_time; ++i) {
-        move(main_speed, 0);
+        move(sp, 0);
         delay(delay_time);
       }
     }
@@ -828,15 +832,9 @@ int spike_in_distance(){
 }
 
 bool junction_detected(){
-  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3));  // (and not the starting point)
+  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3) || (current_path[current_graph_number] == 1 && current_compass == 1));  // (and not the starting point)
   if (((digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)) && !is_a_bay)|| (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
-  //if (digitalRead(sensorFarRight) || digitalRead(sensorFarLeft) || (number_of_connections[current_path[current_graph_number]-1] == 1 && abs(analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION) < signal_distance && current_path[current_graph_number] != 2) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) { 
-//    if (millis() - time_of_last_junction_detected > 2000 || (this_is_the_end == false)) {
-    //if (digitalRead(sensorFarRight)){DEBUG_SERIAL.println("FAR RIGHT");} else if (digitalRead(sensorFarLeft)){DEBUG_SERIAL.println("FAR LEFT");} else if (number_of_connections[current_path[current_graph_number]-1] == 1 && analogRead(sensityPin) * MAX_RANG / ADC_SOLUTION < 10.0){DEBUG_SERIAL.println("TOO CLOSE");} 
     return true;
-    //} else {
-    //  DEBUG_SERIAL.println("TOO EARLY");
-    //  return false;
   } else {
     return false; 
   }
