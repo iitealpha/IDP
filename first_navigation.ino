@@ -866,7 +866,7 @@ void setup() {
   digitalWrite(loop_speed_test_pin, 0);
 
   // Initialize the Motor Shield
-  if (!AFMS.begin(1000)) {
+  if (!AFMS.begin()) {
     DEBUG_SERIAL.println("Motor Shield not found.");
     while (1); // Halt if shield not found
   }
