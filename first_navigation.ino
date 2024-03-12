@@ -52,7 +52,7 @@ float dist_t, sensity_t;
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 5, 10,0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
+const float distances_from_bays[20] = {24.5, 12.0, 24.5, 10.0, 10.0, 5.0, 10.0, 0,0,0,0,0,0,0,0,0,0,0,0,0}; // Put as a coordinate graph number - 1. These are real distances minus 4
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
@@ -421,7 +421,12 @@ void move(int16_t speed, float rotation_fraction) {
 
 void last_bay(){
   straight_junction(); // Ends when white line is over
-  delay(500);	//Keeps driving for 500ms
+  //delay(500);	//Keeps driving for 500ms
+  measure_distance();
+  while (distance_history[distance_history_pointer] > distances_from_bays[1]){
+    delay(delay_time);
+    measure_distance();
+  }
   stop();
   delay(5000);	//Stops for 5s
   this_is_the_end = true; 
