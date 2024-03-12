@@ -241,9 +241,12 @@ void button_press_ISR(){
     } else {
       //mode = 0;
       /*
+      stop();
       for(int i = 0; i < 2; i++){
         mech_servo.write(240);
-        delay
+        delayMicroseconds(300);
+        mech_servo.write(270);
+        delayMicroseconds(300);
       }
       */
       reset();  // To stop the robot, reset arduino.
@@ -671,10 +674,12 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
     move(main_speed, rot);
     delay(delay_time);
   }
+  delay(5);
   while (digitalRead(sensorRight) == 0) {
     move(main_speed, rot);
     delay(delay_time);
   }
+  delay(5);
   while (digitalRead(sensorRight) == 1) {
     move(main_speed, rot);
     delay(delay_time);
@@ -683,7 +688,7 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
   // Tell the robot: you don't need to take backward action until another end is met
   this_is_the_end = false;
     time_of_last_junction_detected = millis();
-  while (millis() - time_of_last_junction_detected < 1000) {
+  while (millis() - time_of_last_junction_detected < 500) {
     straight();
   }
 }
@@ -702,10 +707,12 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
     move(main_speed, rot);
     delay(delay_time);
   }
+  delay(5);
   while (digitalRead(sensorLeft) == 0) {
     move(main_speed, rot);
     delay(delay_time);
   }
+  delay(5);
   while (digitalRead(sensorLeft) == 1) {
     move(main_speed, rot);
     delay(delay_time);
@@ -713,7 +720,7 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
   // Tell the robot: you don't need to take backward action until another end is met
   this_is_the_end = false;
   time_of_last_junction_detected = millis();
-  while (millis() - time_of_last_junction_detected < 1000) {
+  while (millis() - time_of_last_junction_detected < 500) {
     straight();
   }
 }
@@ -779,7 +786,7 @@ void stop_and_release(){
   int y = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number+1]-1];
   if (y == 1) { // Do turning or smth
     move(-main_speed, 0);
-    delay(300);
+    delay(400);
     straight_junction();
   }
 }
