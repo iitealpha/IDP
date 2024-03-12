@@ -450,7 +450,8 @@ void last_bay(){
 }
 
 void straight_junction(){ // This function must go on as long as you are in the junction
-  bool sensor_sequence[] = {1,0,1,0,1};
+  //bool sensor_sequence[] = {1,0,1,0,1};
+  bool sensor_sequence[] = {1,0,1};
   if (this_is_the_end == false){
     DEBUG_SERIAL.println("Go straight in junction");
     while ((digitalRead(sensorFarRight) == 1) || (digitalRead(sensorFarLeft) == 1)) {
@@ -458,9 +459,9 @@ void straight_junction(){ // This function must go on as long as you are in the 
       //DEBUG_SERIAL.println("on it!");
     }
     DEBUG_SERIAL.println("done?");
-  } else if(current_path[current_graph_number] == 8) { // Turn 180 degrees anticlockwise at a T-junction, i.e. stop turning after crossing second white line.
+  } else if(current_path[current_graph_number] == 8 || current_path[current_graph_number] == 1) { // Turn 180 degrees anticlockwise at a T-junction, i.e. stop turning after crossing second white line.
     move(-main_speed, -1);
-    for (int i = 0; i < 5; i++){
+    for (int i = 0; i < 3; i++){
       while (digitalRead(sensorLeft) == sensor_sequence[i]) {
         delay(10); // delay in case of "bounce" in line sensor readings.
       }
@@ -512,8 +513,14 @@ void simple_mode_of_motion(){
   DEBUG_SERIAL.println(current_compass);
 
   // Junction actions to take according to different conditions
-  if (current_path[current_graph_number] == 19 || current_path[current_graph_number] == 20){
+  if (current_path[current_graph_number] == 19 || current_path[current_graph_number] == 20 || (current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11) && (y == 1)){
     DEBUG_SERIAL.println("Skip this junction");
+    if ((current_path[current_graph_number] == 8 || current_path[current_graph_number] == 11) && (y == 1)) {
+      for (int i = 0; i < 500/delay_time; i++) {
+        straight();
+        delay(delay_time);
+      }
+    }
   } else if (current_path[current_graph_number] == 2 && current_compass == 3) {
     last_bay();
   } else if ((4 + y - current_compass) % 4 == 3) { // Turn left
@@ -768,6 +775,13 @@ void stop_and_release(){
   }
   new_path(bay_array[current_bay_number]);
   current_graph_number = 0;
+
+  int y = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number+1]-1];
+  if (y == 1) { // Do turning or smth
+    move(-main_speed, 0);
+    delay(300);
+    straight_junction();
+  }
 }
 
 
@@ -940,8 +954,9 @@ void loop() {
       current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
       current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     }
+    
+    delay(delay_time);
     digitalWrite(loop_speed_test_pin, 1);
-    delay(delay_time); 
     digitalWrite(loop_speed_test_pin, 0);
   } else {
     stop();
