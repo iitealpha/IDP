@@ -52,7 +52,7 @@ float dist_t, sensity_t;
 const uint8_t number_of_connections[20] = {1,1,1,1,1,1,1,3,3,3,3,3,3,3,3,3,3,3,2,2}; // This one keeps number of connections each graph has. 
 // Compass directions: 1 - North, 2 - East, 3 - South, 4 - West.
 
-const float distances_from_bays[20] = {24.5, 5, 24.5, 10, 10, 7, 10, 0,0,0,0,0,0,0,0, 10.0 ,0,0,0,0}; // Put as a coordinate graph number - 1
+const float distances_from_bays[20] = {0, 12, 0, 10, 8, 8, 10, 10.0 ,0,0,10 ,10 ,0,0,10 , 15.0 ,0,0,0,0}; // Put as a coordinate graph number - 1
 
 const uint8_t better_map_of_directions[20][20] = { // First coordinate is current graph, second is next graph. Result is the compass direction
 {5,0,0,0,0,  0,0,1,0,0,     0,0,0,0,0,  0,0,0,0,0},
@@ -240,6 +240,12 @@ void button_press_ISR(){
       mode = 1; 
     } else {
       //mode = 0;
+      /*
+      for(int i = 0; i < 2; i++){
+        mech_servo.write(240);
+        delay
+      }
+      */
       reset();  // To stop the robot, reset arduino.
     }
     first_press_time = new_time;
@@ -424,13 +430,18 @@ void move(int16_t speed, float rotation_fraction) {
 
 void last_bay(){
   straight_junction(); // Ends when white line is over
-  delay(500);	//Keeps driving for 500ms
+  //delay(500);	//Keeps driving for 500ms
+  measure_distance();
+  while (distance_history[distance_history_pointer] > distances_from_bays[1]){
+    delay(1);
+    measure_distance();
+  }
   stop();
   delay(5000);	//Stops for 5s
   this_is_the_end = true; 
   current_compass = 1; //change compass by 180 degrees or from 3 to 1
   move(-main_speed, 0.0);
-  delay(1000);
+  delay(1500);
   new_path_define(23);
   current_graph_number = 0;
   current_bay_number=0;
@@ -448,7 +459,7 @@ void straight_junction(){ // This function must go on as long as you are in the 
     }
     DEBUG_SERIAL.println("done?");
   } else if(current_path[current_graph_number] == 8) { // Turn 180 degrees anticlockwise at a T-junction, i.e. stop turning after crossing second white line.
-    move(main_speed, -1);
+    move(-main_speed, -1);
     for (int i = 0; i < 5; i++){
       while (digitalRead(sensorLeft) == sensor_sequence[i]) {
         delay(10); // delay in case of "bounce" in line sensor readings.
@@ -464,7 +475,7 @@ void straight_junction(){ // This function must go on as long as you are in the 
     if (current_path[current_graph_number] == 2) {
       delay(500);
     } else {
-      move(main_speed, 1);
+      move(-main_speed, 1);
       for (int i = 0; i < 5; i++){
         while (digitalRead(sensorRight) == sensor_sequence[i]) {
           delay(10); // delay in case of "bounce" in line sensor readings.
@@ -555,13 +566,14 @@ void left_junction(){ // This function must go on as long as you are in the junc
     
     // to cope with the problem of detecting two extra junctions previously;
     // probably not needed anymore
-    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions //CHANGED
+    //if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions //CHANGED
+    if (true){
       for (int i = 0; i < 500/delay_time; i++) {
         straight();
         delay(delay_time);
       }
     }
-    } else {
+  } else {
     backwards_left_junction();
   }
 }
@@ -581,14 +593,15 @@ void right_junction(){ // This function must go on as long as you are in the jun
     while (digitalRead(sensorRight) == 1) {} 
     move(main_speed, 0.7);
     delay(30);
-    if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions
+    //if (current_path[current_graph_number] == 6 || current_path[current_graph_number] == 7 || current_path[current_graph_number] == 12){ //Problematic bays, please wait before making any decisions
+    if (true){
       for (int i = 0; i < 500/delay_time; i++) {
         straight();
         delay(delay_time);
       }
     }
 
-    } else {
+  } else {
     backwards_right_junction();
   }
 }
@@ -644,6 +657,7 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
   if (current_path[current_graph_number] == 17 && current_compass == 1 || current_path[current_graph_number] == 14 && current_compass == 1) {
     rot = 0.75;
   }
+  rot = 0.75;
 
   // another way of implementing turning while detecting if the turning process is completed.
   while (digitalRead(sensorRight) == 1) { 
@@ -673,6 +687,7 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
   if (current_path[current_graph_number] == 17 && current_compass == 1 || current_path[current_graph_number] == 14 && current_compass == 1) {
     rot = -0.75;
   }
+  rot = -0.75;
 
   DEBUG_SERIAL.print("You have entered the right junction");
   // another way of implementing turning while detecting if the turning process is completed.
@@ -708,11 +723,15 @@ void stop_and_grab(){
   
 
   // slow the servo down to grab the block to make grabbing process not screwed up by hurrying
-  for (pos; pos >=6; pos -= 1) { // goes from 0 degrees to 180 degrees
+  for (pos; pos >=5; pos -= 1) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     // DEBUG_SERIAL.println("current pos: " + String(pos));
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
-    delay(15);
+    if (pos > 45){
+      delay(5);
+    }else{
+      delay(15);
+    }
     //if(pos%10==0){
     //  DEBUG_SERIAL.println("written mech done") ;}                      // waits 15 ms for the servo to reach the position
   }
@@ -731,7 +750,7 @@ void stop_and_release(){
   // fast release. The position value is renewed fastly, but the servo isn't that fast in real testing
   // the servo then tried the match the position AFTER the pos value is renewed to 270
   // this suprisingly works well when releasing as it saves time by taking most of hand's position reset motion to backwarding process; no need to extra coding in backward motion
-  for (int pos = 6; pos <= 270; pos += 44) { // goes from 0 degrees to 180 degrees
+  for (int pos = 5; pos <= 270; pos += 44) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
     delay(15);                       // waits 15 ms for the servo to reach the position
@@ -753,7 +772,7 @@ void stop_and_release(){
 
 
 void color_detection() {
-  delay(800);
+  delay(500);
   uint16_t r, g, b, c, colorTemp, lux;
   unsigned long start_time = millis();
 
@@ -842,7 +861,13 @@ int spike_in_distance(){
 }
 
 bool junction_detected(){
-  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3) || (current_path[current_graph_number] == 16 && current_compass == 1));  // (and not the starting point)
+  bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3) 
+  || (current_path[current_graph_number] == 16 && current_compass == 1) 
+  || (current_path[current_graph_number] == 8 && current_compass == 4) 
+  || (current_path[current_graph_number] == 12 && current_compass == 4) 
+  || (current_path[current_graph_number] == 16 && current_compass == 1) 
+  || (current_path[current_graph_number] == 15 && current_compass == 2) 
+  || (current_path[current_graph_number] == 11 && current_compass == 2));  // (and not the starting point)
   if (((digitalRead(sensorFarRight) || digitalRead(sensorFarLeft)))|| (is_a_bay && current_wall_distance < distances_from_bays[current_path[current_graph_number]-1]) || ((current_path[current_graph_number] == 1 || current_path[current_graph_number] == 3) && digitalRead(sensorLeft) && digitalRead(sensorRight))) {
     return true;
   } else {
@@ -910,15 +935,9 @@ void loop() {
     straight();
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
       Serial.println(current_path[current_graph_number]);
-      for (int i = 0; i < 8; i ++) {
-        Serial.print(current_path[i]);
-        Serial.print("; ");
-      }
       time_of_last_junction_detected = millis();
       simple_mode_of_motion(); // This function does corresponding turn and ends when the junction is done
       current_compass = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number + 1]-1];
-      //DEBUG_SERIAL.print("Compass was switched to " );
-      //DEBUG_SERIAL.println(current_compass);
       current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     }
     digitalWrite(loop_speed_test_pin, 1);
