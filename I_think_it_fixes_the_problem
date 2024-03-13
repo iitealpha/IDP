@@ -664,8 +664,7 @@ void straight(){ // Regular function for going straightforward
 void backwards_left_junction(){ // Rotate clokwise until certain results
   DEBUG_SERIAL.print("You have entered the left junction");
 
-  int number_of_switches = 0;
-  bool last_value = digitalRead(sensorLeft);
+  float previous_distance = distance_history[distance_history_pointer];
 
   float rot = 0.75; 
 
@@ -673,31 +672,19 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
   while (digitalRead(sensorRight) == 1) { 
     move(main_speed, rot);
     delay(delay_time);
-    if (digitalRead(sensorLeft) != last_value) {
-      last_value = ! last_value;
-      number_of_switches = number_of_switches + 1;
-    }
   }
   delay(5);
   while (digitalRead(sensorRight) == 0) {
     move(main_speed, rot);
     delay(delay_time);
-    if (digitalRead(sensorLeft) != last_value) {
-      last_value = ! last_value;
-      number_of_switches = number_of_switches + 1;
-    }
   }
   delay(5);
   while (digitalRead(sensorRight) == 1) {
     move(main_speed, rot);
     delay(delay_time);
-    if (digitalRead(sensorLeft) != last_value) {
-      last_value = ! last_value;
-      number_of_switches = number_of_switches + 1;
-    }
   }
 
-  if (number_of_switches == 0) {
+  if (abs(distance_history[distance_history_pointer] - previous_distance) < 3) {
     while (digitalRead(sensorRight) == 0) {
       move(main_speed, rot);
       delay(delay_time);
@@ -728,30 +715,18 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
   while (digitalRead(sensorLeft) == 1) { 
     move(main_speed, rot);
     delay(delay_time);
-    if (digitalRead(sensorRight) != last_value) {
-      last_value = ! last_value;
-      number_of_switches = number_of_switches + 1;
-    }
   }
   delay(5);
   while (digitalRead(sensorLeft) == 0) {
     move(main_speed, rot);
     delay(delay_time);
-    if (digitalRead(sensorRight) != last_value) {
-      last_value = ! last_value;
-      number_of_switches = number_of_switches + 1;
-    }
   }
   delay(5);
   while (digitalRead(sensorLeft) == 1) {
     move(main_speed, rot);
     delay(delay_time);
-    if (digitalRead(sensorRight) != last_value) {
-      last_value = ! last_value;
-      number_of_switches = number_of_switches + 1;
-    }
   }
-  if (number_of_switches == 0) {
+  if (abs(distance_history[distance_history_pointer] - previous_distance) < 3) {
     while (digitalRead(sensorLeft) == 0) {
       move(main_speed, rot);
       delay(delay_time);
