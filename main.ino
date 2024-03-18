@@ -138,7 +138,7 @@ bool part_two = false; // Becomes true when robot has completed first run
 unsigned long time_of_last_junction_detected;
 
 bool moving;  // True if moving, for flashing LED.
-uint8_t current_path[] = {2,10,9,4,9,0,0,0}; // Initial path
+uint8_t current_path[] = {2,10,9,4,9,0,0,0}; // Initial path, will be updated when we reach the end of the path. Maximum length is 8.
 uint8_t bay_array[] = {4,5,6,7,2}; // Bays that we need to visit
 uint8_t current_bay_number = 0; 
 
@@ -637,13 +637,15 @@ void backwards(){
 }
 
 void straight(){ // Regular function for going straightforward
-  uint8_t sp = main_speed; 
+  uint8_t sp = main_speed; // Speed of the car is defined by main_speed by default
   if (number_of_connections[current_path[current_graph_number]-1] == 1 && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3)) {
-    sp = 200;
+    sp = 200; // An exception for the a path tested, where the speed is reduced to 200
   }
-  bool right = digitalRead(sensorRight);
+  bool right = digitalRead(sensorRight); // Read the sensor
   bool left = digitalRead(sensorLeft);
-  if (this_is_the_end == false) {
+  
+  if (this_is_the_end == false) { // If we are not at the end of the path
+  // implementation of the car's line-following algorithm; 
     if (right && !left) { //Move right
       move(sp, 0.35);
     } else if (!right && left) { //Move to the left
@@ -656,16 +658,17 @@ void straight(){ // Regular function for going straightforward
         delay(delay_time);
       }
     }
-  } else {
+  } else { // If we are at the end of the path, go backwards
     backwards();
   }
 }
 
-void backwards_left_junction(){ // Rotate clokwise until certain results
+void backwards_left_junction(){ // Rotate clockwise until certain results
   DEBUG_SERIAL.print("You have entered the left junction");
 
   float rot = 1.0; 
   if (current_path[current_graph_number] == 17 && current_compass == 1 || current_path[current_graph_number] == 14 && current_compass == 1) {
+    // if the robot is at the problematic bays, the rotation fraction is set to a smaller value to ensure the robot corrects itself instead of purely rotating
     rot = 0.75;
   }
   rot = 0.75;
@@ -688,13 +691,15 @@ void backwards_left_junction(){ // Rotate clokwise until certain results
 
   // Tell the robot: you don't need to take backward action until another end is met
   this_is_the_end = false;
-    time_of_last_junction_detected = millis();
-  while (millis() - time_of_last_junction_detected < 500) {
+    time_of_last_junction_detected = millis(); // Update the time of last junction detected
+  while (millis() - time_of_last_junction_detected < 500) { // Go straight for 500ms
     straight();
   }
 }
 
-void backwards_right_junction(){ // Rotate anticlockwise until certain reusult. 
+void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
+
+  // similar to the previous function, but the rotation fraction is set to a negative value for opposite rotation
   
   float rot = -1.0; 
   if (current_path[current_graph_number] == 17 && current_compass == 1 || current_path[current_graph_number] == 14 && current_compass == 1) {
@@ -720,8 +725,8 @@ void backwards_right_junction(){ // Rotate anticlockwise until certain reusult.
   }
   // Tell the robot: you don't need to take backward action until another end is met
   this_is_the_end = false;
-  time_of_last_junction_detected = millis();
-  while (millis() - time_of_last_junction_detected < 500) {
+  time_of_last_junction_detected = millis(); // Update the time of last junction detected
+  while (millis() - time_of_last_junction_detected < 500) { // Go straight for 500ms
     straight();
   }
 }
@@ -733,12 +738,13 @@ void stop_and_grab(){
   stop();
   DEBUG_SERIAL.println("grabbing block");
 
-  // Fast movement of grabbing hand at first before actual grabbing, which saves time
+
+  // set the default position of the servo
   int pos = 270;
   
 
   // slow the servo down to grab the block to make grabbing process not screwed up by hurrying
-  for (pos; pos >=5; pos -= 1) { // goes from 0 degrees to 180 degrees
+  for (pos; pos >=5; pos -= 1) { // hand goes from 270 degrees to 5 degrees, grabbing the block
     // in steps of 1 degree
     // DEBUG_SERIAL.println("current pos: " + String(pos));
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
@@ -762,9 +768,9 @@ void stop_and_release(){
   // 2. tell servo to release the block
   stop();
 
-  // fast release. The position value is renewed fastly, but the servo isn't that fast in real testing
-  // the servo then tried the match the position AFTER the pos value is renewed to 270
-  // this suprisingly works well when releasing as it saves time by taking most of hand's position reset motion to backwarding process; no need to extra coding in backward motion
+  // fast release. The position value is renewed fastly and finish the function execution before the servo reaches the position
+  // the servo then tried the match the position AFTER the pos value is renewed to 270 (when the next function is taking place)
+  // this works well as it saves time by taking most of hand's position reset motion to backwarding process; no need to extra coding in backward motion
   for (int pos = 5; pos <= 270; pos += 44) { // goes from 0 degrees to 180 degrees
     // in steps of 1 degree
     mech_servo.write(pos);              // tell servo to go to position in variable 'pos'
@@ -781,9 +787,11 @@ void stop_and_release(){
   }else{
   	current_bay_number = current_bay_number + 1;
   }
+  // update the path to the next bay
   new_path(bay_array[current_bay_number]);
   current_graph_number = 0;
 
+  // detect whether it is at the dropping point. If so, the robot will take a 180 degree turn
   int y = better_map_of_directions[current_path[current_graph_number]-1][current_path[current_graph_number+1]-1];
   if (y == 1 && current_path[current_graph_number] != 5 && current_path[current_graph_number] != 7) { // Do turning or smth
     move(-main_speed, 0);
@@ -794,10 +802,16 @@ void stop_and_release(){
 
 
 void color_detection() {
+  // actions to take:
+  // 1. detect the color;
+  // 2. lighting up the LED according to the color detected;
+  // 3. update the path according to the color detected
+  // different stretegy for the first run and the second run
   delay(500);
   uint16_t r, g, b, c, colorTemp, lux;
   unsigned long start_time = millis();
 
+  // detect the color of the block
   while (millis() - start_time < 3000){
 
     tcs.getRawData(&r, &g, &b, &c);
@@ -828,9 +842,13 @@ void color_detection() {
       delay(100);
     }
   }
+
+  // At the second run, if the robot cannot detect the color, it will assume the block is absent and go to the next bay
   if (part_two){
 	stop_and_release();
   }
+
+  // At the first run, if the robot cannot detect the color, it will assume the block is absent and go to the dropping point
   else{
   	DEBUG_SERIAL.println("can't tell colour, guess black");
   	new_path(1);
@@ -850,6 +868,9 @@ void color_detection() {
   while (digitalRead(sensorRight) == 1) {}
 } **/ // If you ever decide to turn by 180 degrees call this function
 
+
+/* deprecated function to deal with spike value read by the ultrasonic sensor
+it is not used in the final version of the code, as it is no longer a problem for the robot
 
 int spike_in_distance(){
   // Calculates if the ultrasonic sensor reading has spiked due to it seeing the cube instead of the wall.
@@ -881,8 +902,12 @@ int spike_in_distance(){
   }
   
 }
+*/
+
 
 bool junction_detected(){
+  // determine if the car has reached a junction
+  // if so, return true, otherwise return false
   bool is_a_bay = ((number_of_connections[current_path[current_graph_number]-1] == 1) && (current_path[current_graph_number] != 2) && (current_path[current_graph_number] != 1) && (current_path[current_graph_number] != 3) 
   || (current_path[current_graph_number] == 16 && current_compass == 1) 
   || (current_path[current_graph_number] == 8 && current_compass == 4) 
@@ -899,7 +924,7 @@ bool junction_detected(){
 
 
 void setup() {
-  
+  // Initialize the motor shield
   pinMode(NINA_RESETN, OUTPUT);
   digitalWrite(NINA_RESETN, LOW);
   DEBUG_SERIAL.begin(115200); // Start DEBUG_SERIAL communication
@@ -911,13 +936,17 @@ void setup() {
   pinMode(sensorRight, INPUT);
   pinMode(sensorFarRight, INPUT);
   pinMode(button, INPUT);
+  
+  // Set LED pins as output
   pinMode(LED_Red, OUTPUT);
   pinMode(LED_Green, OUTPUT);
   pinMode(LED_Blue, OUTPUT);
   digitalWrite(LED_Red, 0);
   digitalWrite(LED_Green, 0);
   digitalWrite(LED_Blue, 0);
+  // Set up the servo
   mech_servo.attach(servo_pin);
+  // Start value of the servo
   mech_servo.write(270); // start vertically, angle is anticlockwise from just past the closed position.
   pinMode(loop_speed_test_pin, OUTPUT);
   digitalWrite(loop_speed_test_pin, 0);
@@ -950,13 +979,15 @@ void setup() {
 }
 
 void loop() {
+  // Read the sensors
   bool farLeft = digitalRead(sensorFarLeft);
   bool left = digitalRead(sensorLeft);
   bool right = digitalRead(sensorRight);
   bool farRight = digitalRead(sensorFarRight);
 
+  // Main loop
   if (mode != 0) {  
-    measure_distance();
+    measure_distance(); // Take distance reading
     current_wall_distance = distance_history[distance_history_pointer];
     straight();
     if (junction_detected()){ // When junction is detected, we need to 1) Do the junction to certain side, 2) Change the compass and 3) Change certain graph and 
@@ -967,7 +998,10 @@ void loop() {
       current_graph_number = current_graph_number + 1; // Because finished simple_mode_of_motion means that we have gone through the graph and we need to get to the new graph
     }
     
-    delay(delay_time);
+
+    delay(delay_time); // Delay to prevent the loop from running too fast
+
+    // blinking the LED to test the speed of the loop
     digitalWrite(loop_speed_test_pin, 1);
     digitalWrite(loop_speed_test_pin, 0);
   } else {
